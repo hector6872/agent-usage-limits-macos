@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "AgentUsageLimits",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v14)
     ],
@@ -15,7 +16,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "AgentUsageLimits",
-            path: "Sources/AgentUsageLimits"
+            path: "Sources/AgentUsageLimits",
+            resources: [
+                .process("Resources")
+            ]
         ),
     ]
 )

@@ -1,0 +1,30 @@
+/* Spanish Translations */
+
+/* Header & Section */
+"usage_limits_header" = "TUS LÍMITES DE USO · %@";
+
+/* Quota Windows */
+"short_limit_title" = "Límite de %d horas";
+"weekly_limit_title" = "Semanal · todos los modelos";
+
+/* Reset countdowns */
+"resets_soon" = "reinicia pronto";
+"resets_days" = "reinicia en %dd";
+"resets_hours" = "reinicia en %dh";
+"resets_minutes" = "reinicia en %dm";
+
+/* Action buttons & Timestamps */
+"refresh" = "Actualizar";
+"updated_just_now" = "Actualizado ahora";
+"updated_seconds_ago" = "Actualizado hace %ds";
+"updated_minutes_ago" = "Actualizado hace %dm";
+
+/* Settings Drawer */
+"providers_header" = "PROVEEDORES";
+"language_label" = "Idioma";
+"refresh_interval" = "Frecuencia de refresco";
+"quit_app" = "Cerrar aplicación";
+
+/* Empty States */
+"no_active_providers" = "Sin proveedores activos";
+"enable_providers_in_settings" = "Activar proveedores en ajustes";

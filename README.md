@@ -13,6 +13,7 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
 - **Menu Bar Integration**: Real-time quota tracking for multiple AI providers in a compact horizontal layout.
 - **Dual Quota Monitoring**: Tracks rolling session limits (e.g. 5 hours) and weekly quotas with countdown reset timers.
 - **Minimalist macOS UI**: Clean, native design with unobtrusive progress bars and detailed popover cards.
+- **Multi-Language Support (i18n)**: Out-of-the-box support for **English** and **Spanish** (with automatic system language detection and manual selector).
 - **Plugin Architecture**: Modular design to easily add new providers (Antigravity, Claude, Codex, etc.).
 - **Lightweight & Native**: Built with Swift 6 and SwiftUI, with zero external dependencies.
 
@@ -28,17 +29,24 @@ import Foundation
 public final class CustomAIProvider: UsageProvider, @unchecked Sendable {
     public let id: String = "my-ai"
     public let displayName: String = "My AI"
-    public let iconSymbol: String = "sparkles"
+    public let iconSymbol: String = "sparkles" // SF Symbol or custom brand symbol
     
-    public let shortWindowDurationHours: Double = 5.0
+    /// Configurable sliding session window in hours (e.g., 5.0h)
+    public let shortWindowDurationHours: Double
     public var isEnabled: Bool = true
     
+    public init(shortWindowDurationHours: Double = 5.0, isEnabled: Bool = true) {
+        self.shortWindowDurationHours = shortWindowDurationHours
+        self.isEnabled = isEnabled
+    }
+    
     public func fetchUsage() async throws -> ProviderUsage {
-        let shortReset = Date().addingTimeInterval(3600 * 2.5)
-        let weeklyReset = Date().addingTimeInterval(86400 * 3.0)
+        let now = Date()
+        let shortReset = now.addingTimeInterval(3600 * 2.5)
+        let weeklyReset = now.addingTimeInterval(86400 * 3.0)
         
         let shortWindow = QuotaWindow(
-            name: "5-hour limit",
+            name: "\(Int(shortWindowDurationHours))-hour limit",
             windowDurationHours: shortWindowDurationHours,
             usedPercent: 15.0,
             resetDate: shortReset
@@ -56,7 +64,8 @@ public final class CustomAIProvider: UsageProvider, @unchecked Sendable {
             displayName: displayName,
             iconSymbol: iconSymbol,
             shortWindow: shortWindow,
-            weeklyWindow: weeklyWindow
+            weeklyWindow: weeklyWindow,
+            lastUpdated: now
         )
     }
 }
@@ -66,6 +75,32 @@ Then register it in `UsageManager.swift`:
 ```swift
 usageManager.register(provider: CustomAIProvider())
 ```
+
+---
+
+## 🌐 Localization (i18n): Adding a New Language
+
+Translations are organized using standard Apple `Localizable.strings` files inside `Sources/AgentUsageLimits/Resources/`:
+
+```
+Sources/AgentUsageLimits/Resources/
+├── en.lproj/Localizable.strings  # English (Default)
+├── es.lproj/Localizable.strings  # Spanish
+└── fr.lproj/Localizable.strings  # (Example: Adding French)
+```
+
+To add a new language:
+1. Create a new folder: `Sources/AgentUsageLimits/Resources/<language_code>.lproj/Localizable.strings`.
+2. Copy the keys from `en.lproj/Localizable.strings` and translate them.
+3. Add the language case in [`LocalizationManager.swift`](Sources/AgentUsageLimits/Services/LocalizationManager.swift):
+   ```swift
+   public enum AppLanguage: String, CaseIterable, Identifiable {
+       case system = "system"
+       case english = "en"
+       case spanish = "es"
+       case french = "fr" // <-- Add here
+   }
+   ```
 
 ---
 

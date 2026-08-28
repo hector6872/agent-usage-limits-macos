@@ -66,50 +66,25 @@ public struct QuotaWindow: Identifiable, Codable, Sendable {
         self.resetDate = resetDate
     }
 
-    /// Compact format matching the UI: "resets 2h", "resets 1d", "resets 45m"
-    public var resetsFormatted: String {
-        guard let resetDate = resetDate else { return "resets soon" }
-        let now = Date()
-        let interval = resetDate.timeIntervalSince(now)
-        
-        if interval <= 0 {
-            return "resets soon"
+    /// Compact format localized reset string: e.g. "resets 2h" / "reinicia en 2h"
+    @MainActor
+    public var localizedResetsFormatted: String {
+        guard let resetDate = resetDate else {
+            return LocalizationManager.shared.resetsFormatted(interval: 0)
         }
-        
-        let days = Int(interval) / 86400
-        let hours = (Int(interval) % 86400) / 3600
-        let minutes = (Int(interval) % 3600) / 60
-        
-        if days > 0 {
-            return "resets \(days)d"
-        } else if hours > 0 {
-            return "resets \(hours)h"
-        } else {
-            return "resets \(max(1, minutes))m"
-        }
+        let interval = resetDate.timeIntervalSince(Date())
+        return LocalizationManager.shared.resetsFormatted(interval: interval)
     }
     
-    /// Extended readable countdown
-    public var timeRemainingFormatted: String {
-        guard let resetDate = resetDate else { return "Unknown" }
-        let now = Date()
-        let interval = resetDate.timeIntervalSince(now)
-        
-        if interval <= 0 {
-            return "Resetting soon"
+    /// Localized title if matching known window types
+    @MainActor
+    public var localizedTitle: String {
+        if let hours = windowDurationHours, hours < 24 {
+            return LocalizationManager.shared.shortLimitTitle(hours: Int(hours))
+        } else if windowDurationHours == 168.0 || name.contains("Weekly") {
+            return LocalizationManager.shared.weeklyLimitTitle
         }
-        
-        let days = Int(interval) / 86400
-        let hours = (Int(interval) % 86400) / 3600
-        let minutes = (Int(interval) % 3600) / 60
-        
-        if days > 0 {
-            return "\(days)d \(hours)h"
-        } else if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        } else {
-            return "\(max(1, minutes))m"
-        }
+        return name
     }
 }
 

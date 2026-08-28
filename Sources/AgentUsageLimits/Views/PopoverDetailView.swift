@@ -1,9 +1,10 @@
 import SwiftUI
 import AppKit
 
-/// Detail popover window matching the clean, minimal aesthetic
+/// Detail popover window matching the clean, minimal aesthetic with multi-language support
 public struct PopoverDetailView: View {
     @ObservedObject var usageManager: UsageManager
+    @ObservedObject private var l10n = LocalizationManager.shared
     @State private var showingSettings: Bool = false
     
     public init(usageManager: UsageManager) {
@@ -42,17 +43,17 @@ public struct PopoverDetailView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .frame(width: 320)
+        .frame(width: 330)
         .background(Color(NSColor.windowBackgroundColor))
     }
     
     // MARK: - Empty State
     private var emptyStateView: some View {
         VStack(alignment: .center, spacing: 8) {
-            Text("No active providers")
+            Text(l10n.noActiveProviders)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.secondary)
-            Button("Enable Providers in Settings") {
+            Button(l10n.enableProvidersInSettings) {
                 withAnimation { showingSettings = true }
             }
             .buttonStyle(.link)
@@ -65,7 +66,7 @@ public struct PopoverDetailView: View {
     // MARK: - Settings View
     private var settingsView: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("PROVIDERS")
+            Text(l10n.providersHeader)
                 .font(.system(size: 10.5, weight: .semibold))
                 .foregroundColor(.secondary)
             
@@ -84,8 +85,27 @@ public struct PopoverDetailView: View {
                 }
             }
             
+            Divider().padding(.vertical, 2)
+            
+            // Language selector
             HStack {
-                Text("Refresh interval")
+                Text(l10n.languageLabel)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Picker("", selection: $l10n.currentLanguage) {
+                    ForEach(AppLanguage.allCases) { lang in
+                        Text(lang.displayName).tag(lang)
+                    }
+                }
+                .pickerStyle(.menu)
+                .controlSize(.small)
+                .frame(width: 130)
+            }
+            
+            // Refresh interval
+            HStack {
+                Text(l10n.refreshInterval)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -99,9 +119,9 @@ public struct PopoverDetailView: View {
                 .controlSize(.small)
                 .frame(width: 80)
             }
-            .padding(.top, 4)
+            .padding(.top, 2)
             
-            Button("Quit Application") {
+            Button(l10n.quitApp) {
                 NSApplication.shared.terminate(nil)
             }
             .buttonStyle(.plain)
@@ -123,7 +143,7 @@ public struct PopoverDetailView: View {
                 }
             } label: {
                 HStack(spacing: 4) {
-                    Text("Refresh")
+                    Text(l10n.refresh)
                         .font(.system(size: 13, weight: .regular))
                     if usageManager.isRefreshing {
                         ProgressView()
@@ -149,7 +169,7 @@ public struct PopoverDetailView: View {
             .buttonStyle(.plain)
             .padding(.trailing, 6)
             
-            // "Updated just now" Pill Tag
+            // "Updated just now" / "Actualizado ahora" Pill Tag
             Text(timeAgoFormatted(since: usageManager.lastRefreshedDate))
                 .font(.system(size: 11.5, weight: .regular))
                 .foregroundColor(.primary.opacity(0.75))
@@ -165,12 +185,12 @@ public struct PopoverDetailView: View {
     private func timeAgoFormatted(since date: Date) -> String {
         let seconds = Int(Date().timeIntervalSince(date))
         if seconds < 10 {
-            return "Updated just now"
+            return l10n.updatedJustNow
         } else if seconds < 60 {
-            return "Updated \(seconds)s ago"
+            return l10n.updatedSecondsAgo(seconds)
         } else {
             let mins = seconds / 60
-            return "Updated \(mins)m ago"
+            return l10n.updatedMinutesAgo(mins)
         }
     }
 }
@@ -178,14 +198,15 @@ public struct PopoverDetailView: View {
 /// Minimalist provider usage section
 struct ProviderSectionView: View {
     let usage: ProviderUsage
+    @ObservedObject private var l10n = LocalizationManager.shared
     
     private let barBlue = Color(red: 0.12, green: 0.42, blue: 0.90) // Native clean blue accent
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Section Header: "YOUR USAGE LIMITS · TEAM" or "YOUR USAGE LIMITS · PROVIDER"
+            // Section Header: "YOUR USAGE LIMITS · PROVIDER" / "TUS LÍMITES DE USO · PROVIDER"
             HStack(spacing: 5) {
-                Text("YOUR USAGE LIMITS · \(usage.displayName.uppercased())")
+                Text(l10n.yourUsageLimits(provider: usage.displayName))
                     .font(.system(size: 11.5, weight: .bold))
                     .foregroundColor(.secondary.opacity(0.85))
                     .tracking(0.3)
@@ -199,13 +220,13 @@ struct ProviderSectionView: View {
             // 5-Hour / Short limit row
             VStack(alignment: .leading, spacing: 5) {
                 HStack {
-                    Text(usage.shortWindow.name)
+                    Text(usage.shortWindow.localizedTitle)
                         .font(.system(size: 13.5, weight: .regular))
                         .foregroundColor(.primary)
                     
                     Spacer()
                     
-                    Text("\(Int(usage.shortWindow.usedPercent))% · \(usage.shortWindow.resetsFormatted)")
+                    Text("\(Int(usage.shortWindow.usedPercent))% · \(usage.shortWindow.localizedResetsFormatted)")
                         .font(.system(size: 13.5, weight: .regular))
                         .foregroundColor(.primary.opacity(0.85))
                 }
@@ -220,13 +241,13 @@ struct ProviderSectionView: View {
             // Weekly limit row
             VStack(alignment: .leading, spacing: 5) {
                 HStack {
-                    Text(usage.weeklyWindow.name)
+                    Text(usage.weeklyWindow.localizedTitle)
                         .font(.system(size: 13.5, weight: .regular))
                         .foregroundColor(.primary)
                     
                     Spacer()
                     
-                    Text("\(Int(usage.weeklyWindow.usedPercent))% · \(usage.weeklyWindow.resetsFormatted)")
+                    Text("\(Int(usage.weeklyWindow.usedPercent))% · \(usage.weeklyWindow.localizedResetsFormatted)")
                         .font(.system(size: 13.5, weight: .regular))
                         .foregroundColor(.primary.opacity(0.85))
                 }

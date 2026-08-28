@@ -21,9 +21,20 @@ rm -rf "${BUNDLE_DIR}"
 mkdir -p "${MACOS_DIR}"
 mkdir -p "${RESOURCES_DIR}"
 
-# Copy binary
+# Copy executable
 cp ".build/release/${APP_NAME}" "${MACOS_DIR}/${APP_NAME}"
 chmod +x "${MACOS_DIR}/${APP_NAME}"
+
+# Copy SPM Resource bundles if generated
+if [ -d ".build/release/${APP_NAME}_${APP_NAME}.bundle" ]; then
+    cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${RESOURCES_DIR}/"
+    cp -R ".build/release/${APP_NAME}_${APP_NAME}.bundle" "${MACOS_DIR}/"
+fi
+
+# Also copy .lproj folders directly into Resources for standard macOS bundle lookup
+if [ -d "Sources/${APP_NAME}/Resources" ]; then
+    cp -R Sources/${APP_NAME}/Resources/*.lproj "${RESOURCES_DIR}/" 2>/dev/null || true
+fi
 
 # Copy icons if available
 if [ -f "resources/AppIcon.icns" ]; then
@@ -54,6 +65,10 @@ cat <<EOF > "${CONTENTS_DIR}/Info.plist"
     <string>${APP_NAME}</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleAllowMixedLocalizations</key>
+    <true/>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>LSUIElement</key>

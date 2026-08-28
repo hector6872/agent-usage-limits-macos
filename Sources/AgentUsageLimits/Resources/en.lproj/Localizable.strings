@@ -1,0 +1,30 @@
+/* English Translations */
+
+/* Header & Section */
+"usage_limits_header" = "YOUR USAGE LIMITS · %@";
+
+/* Quota Windows */
+"short_limit_title" = "%d-hour limit";
+"weekly_limit_title" = "Weekly · all models";
+
+/* Reset countdowns */
+"resets_soon" = "resets soon";
+"resets_days" = "resets %dd";
+"resets_hours" = "resets %dh";
+"resets_minutes" = "resets %dm";
+
+/* Action buttons & Timestamps */
+"refresh" = "Refresh";
+"updated_just_now" = "Updated just now";
+"updated_seconds_ago" = "Updated %ds ago";
+"updated_minutes_ago" = "Updated %dm ago";
+
+/* Settings Drawer */
+"providers_header" = "PROVIDERS";
+"language_label" = "Language";
+"refresh_interval" = "Refresh interval";
+"quit_app" = "Quit Application";
+
+/* Empty States */
+"no_active_providers" = "No active providers";
+"enable_providers_in_settings" = "Enable Providers in Settings";
