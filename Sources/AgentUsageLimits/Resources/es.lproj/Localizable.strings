@@ -23,6 +23,7 @@
 "language_label" = "Idioma";
 "language_system" = "Sistema";
 "refresh_interval" = "Frecuencia de refresco";
+"launch_at_login" = "Iniciar al arrancar";
 "quit_app" = "Cerrar aplicación";
 
 /* Empty States */

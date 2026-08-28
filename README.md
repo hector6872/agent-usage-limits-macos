@@ -13,6 +13,7 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
 - **Menu Bar Integration**: Real-time quota tracking for multiple AI providers in a compact horizontal layout.
 - **Dual Quota Monitoring**: Tracks rolling session limits (e.g. 5 hours) and weekly quotas with countdown reset timers.
 - **Minimalist macOS UI**: Clean, native design with unobtrusive progress bars and detailed popover cards.
+- **Launch at Login**: Optional native login item registration via `SMAppService` to auto-start with macOS.
 - **Multi-Language Support (i18n)**: Out-of-the-box support for **English** and **Spanish** (with automatic system language detection and manual selector).
 - **Plugin Architecture**: Modular design to easily add new providers (Antigravity, Claude, Codex, etc.).
 - **Lightweight & Native**: Built with Swift 6 and SwiftUI, with zero external dependencies.

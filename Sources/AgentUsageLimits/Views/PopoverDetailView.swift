@@ -5,6 +5,7 @@ import AppKit
 public struct PopoverDetailView: View {
     @ObservedObject var usageManager: UsageManager
     @ObservedObject private var l10n = LocalizationManager.shared
+    @ObservedObject private var launchAtLogin = LaunchAtLoginManager.shared
     @State private var showingSettings: Bool = false
     
     public init(usageManager: UsageManager) {
@@ -87,6 +88,21 @@ public struct PopoverDetailView: View {
             
             Divider().padding(.vertical, 2)
             
+            // Launch at login toggle
+            HStack {
+                Text(l10n["launch_at_login"])
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { launchAtLogin.isEnabled },
+                    set: { launchAtLogin.setEnabled($0) }
+                ))
+                .toggleStyle(.switch)
+                .controlSize(.mini)
+            }
+            .padding(.top, 2)
+            
             // Language selector
             HStack {
                 Text(l10n["language_label"])
@@ -102,6 +118,7 @@ public struct PopoverDetailView: View {
                 .controlSize(.small)
                 .frame(width: 130)
             }
+            .padding(.top, 2)
             
             // Refresh interval (1m, 3m default, 5m, 15m, 30m)
             HStack {
