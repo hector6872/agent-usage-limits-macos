@@ -90,5 +90,10 @@ usageManager.register(provider: CustomAIProvider())
 
 ---
 
+## 🤝 Contributing
+Contributions are welcome! Please check out the [CONTRIBUTING.md](CONTRIBUTING.md) guide for details on how to get started and how to add new provider plugins.
+
+---
+
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
