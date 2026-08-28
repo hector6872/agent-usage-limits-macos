@@ -8,7 +8,9 @@ public final class UsageManager: ObservableObject {
     @Published public private(set) var usages: [String: ProviderUsage] = [:]
     @Published public private(set) var isRefreshing: Bool = false
     @Published public private(set) var lastRefreshedDate: Date = Date()
-    @Published public var refreshIntervalSeconds: TimeInterval = 60.0 {
+    
+    /// Auto-refresh interval (default 3 minutes = 180 seconds)
+    @Published public var refreshIntervalSeconds: TimeInterval = 180.0 {
         didSet {
             setupTimer()
         }
@@ -47,6 +49,23 @@ public final class UsageManager: ObservableObject {
             guard provider.isEnabled else { return nil }
             return usages[provider.id]
         }
+    }
+    
+    /// Whether manual refresh button is allowed to be pressed at the given time
+    public func canManualRefresh(at date: Date = Date()) -> Bool {
+        guard !isRefreshing else { return false }
+        // If auto-refresh is 1 minute (<= 60s), manual refresh is disabled
+        guard refreshIntervalSeconds > 60.0 else { return false }
+        // 1-minute cooldown from last refresh
+        let elapsed = date.timeIntervalSince(lastRefreshedDate)
+        return elapsed >= 60.0
+    }
+    
+    /// Cooldown remaining in seconds (0 if ready)
+    public func cooldownRemainingSeconds(at date: Date = Date()) -> Int {
+        guard refreshIntervalSeconds > 60.0 else { return 0 }
+        let elapsed = date.timeIntervalSince(lastRefreshedDate)
+        return max(0, 60 - Int(elapsed))
     }
     
     /// Registers a new provider plugin dynamically
@@ -124,7 +143,7 @@ public final class UsageManager: ObservableObject {
         timerTask?.cancel()
         timerTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(self?.refreshIntervalSeconds ?? 60.0))
+                try? await Task.sleep(for: .seconds(self?.refreshIntervalSeconds ?? 180.0))
                 if Task.isCancelled { break }
                 await self?.refreshAll()
             }

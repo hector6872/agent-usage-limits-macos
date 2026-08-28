@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-/// Detail popover window matching the clean, minimal aesthetic with multi-language support
+/// Detail popover window matching the clean, minimal aesthetic with live updating timestamp and inline refresh badge
 public struct PopoverDetailView: View {
     @ObservedObject var usageManager: UsageManager
     @ObservedObject private var l10n = LocalizationManager.shared
@@ -38,7 +38,7 @@ public struct PopoverDetailView: View {
                 .padding(.top, 14)
                 .padding(.bottom, 10)
             
-            // Bottom Action Footer: "Refresh" + "Updated just now" + subtle settings/quit
+            // Bottom Action Footer with live ticking badge
             footerView
         }
         .padding(.horizontal, 16)
@@ -103,17 +103,18 @@ public struct PopoverDetailView: View {
                 .frame(width: 130)
             }
             
-            // Refresh interval
+            // Refresh interval (1m, 3m default, 5m, 15m, 30m)
             HStack {
                 Text(l10n["refresh_interval"])
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 Spacer()
                 Picker("", selection: $usageManager.refreshIntervalSeconds) {
-                    Text("30s").tag(30.0)
                     Text("1m").tag(60.0)
+                    Text("3m").tag(180.0)
                     Text("5m").tag(300.0)
                     Text("15m").tag(900.0)
+                    Text("30m").tag(1800.0)
                 }
                 .pickerStyle(.menu)
                 .controlSize(.small)
@@ -136,50 +137,95 @@ public struct PopoverDetailView: View {
     // MARK: - Footer
     private var footerView: some View {
         HStack(alignment: .center) {
-            // Refresh text button
-            Button {
-                Task {
-                    await usageManager.refreshAll()
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Text(l10n["refresh"])
-                        .font(.system(size: 13, weight: .regular))
-                    if usageManager.isRefreshing {
-                        ProgressView()
-                            .controlSize(.mini)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-            .disabled(usageManager.isRefreshing)
-            
-            Spacer()
-            
-            // Subtle Settings gear
+            // Settings button on the left
             Button {
                 withAnimation(.easeInOut(duration: 0.15)) {
                     showingSettings.toggle()
                 }
             } label: {
-                Image(systemName: showingSettings ? "gearshape.fill" : "gearshape")
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                HStack(spacing: 4) {
+                    Image(systemName: showingSettings ? "gearshape.fill" : "gearshape")
+                        .font(.system(size: 12))
+                }
+                .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
-            .padding(.trailing, 6)
+            .help(l10n["providers_header"])
             
-            // Native time ago pill tag
+            Spacer()
+            
+            // Live-ticking badge with integrated refresh icon button
+            LiveRefreshBadgeView(usageManager: usageManager, l10n: l10n)
+        }
+    }
+}
+
+/// Live ticking badge view updating every second
+struct LiveRefreshBadgeView: View {
+    @ObservedObject var usageManager: UsageManager
+    @ObservedObject var l10n: LocalizationManager
+    
+    var body: some View {
+        TimelineView(.periodic(from: Date.now, by: 1.0)) { context in
+            BadgeContent(date: context.date, usageManager: usageManager, l10n: l10n)
+        }
+    }
+}
+
+/// Content inside the pill badge
+struct BadgeContent: View {
+    let date: Date
+    @ObservedObject var usageManager: UsageManager
+    @ObservedObject var l10n: LocalizationManager
+    
+    var body: some View {
+        let canRefresh = usageManager.canManualRefresh(at: date)
+        let cooldown = usageManager.cooldownRemainingSeconds(at: date)
+        
+        HStack(spacing: 6) {
+            // Time text (updates every second)
             Text(l10n.timeAgo(since: usageManager.lastRefreshedDate))
                 .font(.system(size: 11.5, weight: .regular))
-                .foregroundColor(.primary.opacity(0.75))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(Color.primary.opacity(0.08))
-                )
+                .foregroundColor(.primary.opacity(0.8))
+            
+            // Refresh icon inside badge
+            Button {
+                if canRefresh {
+                    Task {
+                        await usageManager.refreshAll()
+                    }
+                }
+            } label: {
+                if usageManager.isRefreshing {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .scaleEffect(0.7)
+                } else {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(canRefresh ? .primary.opacity(0.85) : .secondary.opacity(0.35))
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(!canRefresh)
+            .help(tooltipText(cooldown: cooldown))
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(
+            Capsule()
+                .fill(Color.primary.opacity(0.08))
+        )
+    }
+    
+    private func tooltipText(cooldown: Int) -> String {
+        if usageManager.refreshIntervalSeconds <= 60.0 {
+            return l10n["auto_refresh_1m_hint"]
+        }
+        if cooldown > 0 {
+            return l10n.string("cooldown_hint", cooldown)
+        }
+        return l10n["refresh_now_hint"]
     }
 }
 

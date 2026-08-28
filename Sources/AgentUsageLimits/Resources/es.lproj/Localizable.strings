@@ -14,6 +14,9 @@
 /* Action buttons & Timestamps */
 "refresh" = "Actualizar";
 "updated_just_now" = "Actualizado ahora";
+"auto_refresh_1m_hint" = "Actualización automática cada 1 min (manual desactivado)";
+"cooldown_hint" = "Espera %ds para volver a actualizar";
+"refresh_now_hint" = "Actualizar ahora";
 
 /* Settings Drawer */
 "providers_header" = "PROVEEDORES";

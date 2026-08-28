@@ -14,6 +14,9 @@
 /* Action buttons & Timestamps */
 "refresh" = "Refresh";
 "updated_just_now" = "Updated just now";
+"auto_refresh_1m_hint" = "Auto-refreshing every 1 min (manual disabled)";
+"cooldown_hint" = "Wait %ds to refresh again";
+"refresh_now_hint" = "Refresh now";
 
 /* Settings Drawer */
 "providers_header" = "PROVIDERS";
