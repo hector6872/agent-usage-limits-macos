@@ -1,6 +1,63 @@
 #!/usr/bin/env swift
 import Cocoa
 
+func drawStar(in context: CGContext, center: CGPoint, outerRadius: CGFloat, innerRadius: CGFloat, fillColor: NSColor) {
+    let path = CGMutablePath()
+    let points = 4
+    for i in 0..<(points * 2) {
+        let angle = Double(i) * (.pi / Double(points)) - (.pi / 2.0)
+        let r = (i % 2 == 0) ? outerRadius : innerRadius
+        let pt = CGPoint(
+            x: center.x + CGFloat(cos(angle)) * r,
+            y: center.y + CGFloat(sin(angle)) * r
+        )
+        if i == 0 {
+            path.move(to: pt)
+        } else {
+            path.addLine(to: pt)
+        }
+    }
+    path.closeSubpath()
+    
+    context.saveGState()
+    context.addPath(path)
+    context.setFillColor(fillColor.cgColor)
+    context.fillPath()
+    context.restoreGState()
+}
+
+func drawCurvedStar(in context: CGContext, center: CGPoint, radius: CGFloat, gradient: CGGradient) {
+    let path = CGMutablePath()
+    let r = radius
+    let w = r * 0.18 // waist curvature
+    
+    // Top point
+    path.move(to: CGPoint(x: center.x, y: center.y + r))
+    // Curve to Right point
+    path.addQuadCurve(to: CGPoint(x: center.x + r, y: center.y), control: CGPoint(x: center.x + w, y: center.y + w))
+    // Curve to Bottom point
+    path.addQuadCurve(to: CGPoint(x: center.x, y: center.y - r), control: CGPoint(x: center.x + w, y: center.y - w))
+    // Curve to Left point
+    path.addQuadCurve(to: CGPoint(x: center.x - r, y: center.y), control: CGPoint(x: center.x - w, y: center.y - w))
+    // Curve back to Top point
+    path.addQuadCurve(to: CGPoint(x: center.x, y: center.y + r), control: CGPoint(x: center.x - w, y: center.y + w))
+    path.closeSubpath()
+    
+    context.saveGState()
+    context.addPath(path)
+    context.clip()
+    context.drawLinearGradient(gradient, start: CGPoint(x: center.x - r, y: center.y + r), end: CGPoint(x: center.x + r, y: center.y - r), options: [])
+    context.restoreGState()
+    
+    // White inner core glow
+    context.saveGState()
+    context.addPath(path)
+    context.setStrokeColor(NSColor.white.withAlphaComponent(0.4).cgColor)
+    context.setLineWidth(radius * 0.04)
+    context.strokePath()
+    context.restoreGState()
+}
+
 func createIcon(size: CGFloat) -> NSImage {
     let image = NSImage(size: NSSize(width: size, height: size))
     image.lockFocus()
@@ -11,82 +68,100 @@ func createIcon(size: CGFloat) -> NSImage {
     }
     
     let rect = CGRect(x: 0, y: 0, width: size, height: size)
-    let cornerRadius = size * 0.22
-    let path = CGPath(roundedRect: rect.insetBy(dx: size * 0.05, dy: size * 0.05), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+    let cornerRadius = size * 0.224
+    let inset = size * 0.04
+    let path = CGPath(roundedRect: rect.insetBy(dx: inset, dy: inset), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
     
-    // Background gradient (Deep AI Indigo to Neon Cyan)
+    // 1. Deep Space AI Gradient Background (Obsidian & Indigo to Deep Violet)
     let colorSpace = CGColorSpaceCreateDeviceRGB()
-    let colors = [
-        NSColor(red: 0.08, green: 0.12, blue: 0.28, alpha: 1.0).cgColor,
-        NSColor(red: 0.12, green: 0.38, blue: 0.72, alpha: 1.0).cgColor,
-        NSColor(red: 0.05, green: 0.75, blue: 0.65, alpha: 1.0).cgColor
+    let bgColors = [
+        NSColor(red: 0.05, green: 0.07, blue: 0.16, alpha: 1.0).cgColor,
+        NSColor(red: 0.10, green: 0.14, blue: 0.30, alpha: 1.0).cgColor,
+        NSColor(red: 0.18, green: 0.10, blue: 0.32, alpha: 1.0).cgColor
     ] as CFArray
-    let locations: [CGFloat] = [0.0, 0.6, 1.0]
+    let bgLocations: [CGFloat] = [0.0, 0.55, 1.0]
     
-    if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: locations) {
+    if let bgGradient = CGGradient(colorsSpace: colorSpace, colors: bgColors, locations: bgLocations) {
         context.saveGState()
         context.addPath(path)
         context.clip()
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0, y: size), end: CGPoint(x: size, y: 0), options: [])
+        context.drawLinearGradient(bgGradient, start: CGPoint(x: 0, y: size), end: CGPoint(x: size, y: 0), options: [])
         context.restoreGState()
     }
     
-    // Draw outer subtle border
+    // Subtle outer glass border
     context.saveGState()
     context.addPath(path)
-    context.setStrokeColor(NSColor.white.withAlphaComponent(0.25).cgColor)
-    context.setLineWidth(size * 0.02)
+    context.setStrokeColor(NSColor.white.withAlphaComponent(0.22).cgColor)
+    context.setLineWidth(size * 0.015)
     context.strokePath()
     context.restoreGState()
     
-    // Draw Gauge Arc
-    let center = CGPoint(x: size * 0.5, y: size * 0.52)
-    let radius = size * 0.28
-    let arcPath = CGMutablePath()
-    arcPath.addArc(center: center, radius: radius, startAngle: -.pi * 0.2, endAngle: .pi * 1.2, clockwise: false)
+    let center = CGPoint(x: size * 0.5, y: size * 0.5)
+    
+    // 2. Glowing Token / Quota Meter Ring (Background Track)
+    let meterRadius = size * 0.34
+    let meterBgPath = CGMutablePath()
+    meterBgPath.addArc(center: center, radius: meterRadius, startAngle: -.pi * 0.25, endAngle: .pi * 1.25, clockwise: false)
     
     context.saveGState()
-    context.addPath(arcPath)
-    context.setStrokeColor(NSColor.white.withAlphaComponent(0.35).cgColor)
-    context.setLineWidth(size * 0.06)
+    context.addPath(meterBgPath)
+    context.setStrokeColor(NSColor.white.withAlphaComponent(0.18).cgColor)
+    context.setLineWidth(size * 0.045)
     context.setLineCap(.round)
     context.strokePath()
     context.restoreGState()
     
-    // Active Gauge Arc (Green neon)
-    let activeArc = CGMutablePath()
-    activeArc.addArc(center: center, radius: radius, startAngle: .pi * 0.3, endAngle: .pi * 1.2, clockwise: false)
+    // 3. Active Gradient Quota Arc
+    let activeMeterPath = CGMutablePath()
+    activeMeterPath.addArc(center: center, radius: meterRadius, startAngle: .pi * 0.35, endAngle: .pi * 1.25, clockwise: false)
     
-    context.saveGState()
-    context.addPath(activeArc)
-    context.setStrokeColor(NSColor(red: 0.3, green: 0.95, blue: 0.6, alpha: 1.0).cgColor)
-    context.setLineWidth(size * 0.06)
-    context.setLineCap(.round)
-    context.strokePath()
-    context.restoreGState()
+    let meterColors = [
+        NSColor(red: 0.0, green: 0.95, blue: 0.75, alpha: 1.0).cgColor,
+        NSColor(red: 0.0, green: 0.65, blue: 1.0, alpha: 1.0).cgColor,
+        NSColor(red: 0.65, green: 0.3, blue: 0.95, alpha: 1.0).cgColor
+    ] as CFArray
+    let meterLocations: [CGFloat] = [0.0, 0.5, 1.0]
     
-    // Draw AI Sparkle / Percentage symbol in center
-    let percentText = "%"
-    let font = NSFont.systemFont(ofSize: size * 0.28, weight: .black)
-    let textAttributes: [NSAttributedString.Key: Any] = [
-        .font: font,
-        .foregroundColor: NSColor.white
-    ]
-    let attrString = NSAttributedString(string: percentText, attributes: textAttributes)
-    let textSize = attrString.size()
-    let textOrigin = CGPoint(
-        x: center.x - textSize.width * 0.5,
-        y: center.y - textSize.height * 0.5
-    )
-    attrString.draw(at: textOrigin)
+    if let meterGrad = CGGradient(colorsSpace: colorSpace, colors: meterColors, locations: meterLocations) {
+        context.saveGState()
+        context.addPath(activeMeterPath)
+        context.replacePathWithStrokedPath()
+        context.clip()
+        context.drawLinearGradient(meterGrad, start: CGPoint(x: center.x - meterRadius, y: center.y), end: CGPoint(x: center.x + meterRadius, y: center.y + meterRadius), options: [])
+        context.restoreGState()
+    }
     
-    // Sparkles on top right
-    let sparkleRadius = size * 0.04
-    let sparkleCenter = CGPoint(x: size * 0.72, y: size * 0.72)
-    context.saveGState()
-    context.setFillColor(NSColor.white.cgColor)
-    context.fillEllipse(in: CGRect(x: sparkleCenter.x - sparkleRadius, y: sparkleCenter.y - sparkleRadius, width: sparkleRadius * 2, height: sparkleRadius * 2))
-    context.restoreGState()
+    // 4. Central AI Sparkle Star (Iridescent Neon Gradient)
+    let starColors = [
+        NSColor(red: 0.20, green: 0.90, blue: 1.00, alpha: 1.0).cgColor, // Cyan
+        NSColor(red: 0.60, green: 0.35, blue: 1.00, alpha: 1.0).cgColor, // Violet
+        NSColor(red: 1.00, green: 0.30, blue: 0.65, alpha: 1.0).cgColor  // Coral Pink
+    ] as CFArray
+    let starLocations: [CGFloat] = [0.0, 0.5, 1.0]
+    
+    if let starGradient = CGGradient(colorsSpace: colorSpace, colors: starColors, locations: starLocations) {
+        // Star Shadow / Glow
+        context.saveGState()
+        context.setShadow(offset: CGSize(width: 0, height: -size * 0.015), blur: size * 0.08, color: NSColor(red: 0.3, green: 0.6, blue: 1.0, alpha: 0.6).cgColor)
+        drawCurvedStar(in: context, center: center, radius: size * 0.22, gradient: starGradient)
+        context.restoreGState()
+    }
+    
+    // 5. Satellite Mini Sparkles
+    let miniSparkle1 = CGPoint(x: size * 0.74, y: size * 0.72)
+    let miniColors = [
+        NSColor.white.cgColor,
+        NSColor(red: 0.4, green: 0.85, blue: 1.0, alpha: 1.0).cgColor
+    ] as CFArray
+    if let miniGrad = CGGradient(colorsSpace: colorSpace, colors: miniColors, locations: [0.0, 1.0]) {
+        drawCurvedStar(in: context, center: miniSparkle1, radius: size * 0.08, gradient: miniGrad)
+    }
+    
+    let miniSparkle2 = CGPoint(x: size * 0.26, y: size * 0.28)
+    if let miniGrad = CGGradient(colorsSpace: colorSpace, colors: miniColors, locations: [0.0, 1.0]) {
+        drawCurvedStar(in: context, center: miniSparkle2, radius: size * 0.05, gradient: miniGrad)
+    }
     
     image.unlockFocus()
     return image
@@ -118,4 +193,4 @@ for (filename, size) in sizes {
     }
 }
 
-print("Iconset generated successfully at \(iconsetDir)")
+print("AI Iconset generated successfully at \(iconsetDir)")
