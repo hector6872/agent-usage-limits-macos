@@ -24,18 +24,18 @@ public final class CodexUsageProvider: UsageProvider, @unchecked Sendable {
         let shortWindow = QuotaWindow(
             name: "\(Int(shortWindowDurationHours))-hour limit",
             windowDurationHours: shortWindowDurationHours,
-            usedPercent: 89.0, // 11% remaining (Orange dot)
-            usedUnits: 445,
+            usedPercent: 100.0, // 0% remaining (Red dot + Red 0%)
+            usedUnits: 500,
             totalUnits: 500,
             unitLabel: "reqs",
             resetDate: shortResetDate
         )
         
         let weeklyWindow = QuotaWindow(
-            name: "Weekly · all models",
+            name: "Weekly",
             windowDurationHours: 168.0,
-            usedPercent: 93.0, // 7% remaining (Red arrow ▲ 7%)
-            usedUnits: 4650,
+            usedPercent: 100.0, // 0% remaining (Red W + Red 0%)
+            usedUnits: 5000,
             totalUnits: 5000,
             unitLabel: "reqs",
             resetDate: weeklyResetDate

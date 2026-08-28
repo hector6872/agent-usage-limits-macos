@@ -31,9 +31,9 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         )
         
         let weeklyWindow = QuotaWindow(
-            name: "Weekly · all models",
+            name: "Weekly",
             windowDurationHours: 168.0,
-            usedPercent: 28.0,
+            usedPercent: 28.0, // 72% remaining
             usedUnits: 560000,
             totalUnits: 2000000,
             unitLabel: "tok",
@@ -46,7 +46,7 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
             iconSymbol: iconSymbol,
             shortWindow: shortWindow,
             weeklyWindow: weeklyWindow,
-            showWeeklyInMenuBar: false, // Matches reference screenshot (single line)
+            showWeeklyInMenuBar: true,
             lastUpdated: now
         )
     }

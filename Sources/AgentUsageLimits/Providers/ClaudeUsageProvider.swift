@@ -31,9 +31,9 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         )
         
         let weeklyWindow = QuotaWindow(
-            name: "Weekly · all models",
+            name: "Weekly",
             windowDurationHours: 168.0,
-            usedPercent: 7.0, // 7% used
+            usedPercent: 7.0, // 93% remaining
             usedUnits: 350,
             totalUnits: 5000,
             unitLabel: "msgs",

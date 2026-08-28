@@ -1,23 +1,33 @@
 import Foundation
 import SwiftUI
 
-/// Status of the quota health
+/// Status of the quota health based on remaining percentage
 public enum HealthStatus: String, Codable, Sendable {
-    case healthy    // Plenty of quota remaining (> 30%)
-    case warning    // Approaching limit (10% - 30%)
-    case critical   // Very low or depleted (< 10%)
+    case healthy    // > 60% remaining (Green)
+    case warning    // 25% - 60% remaining (Yellow)
+    case critical   // < 25% remaining (Red)
     case unknown    // Unable to fetch or offline
 
     public var color: Color {
         switch self {
         case .healthy:
-            return .green
+            return Color(red: 0.20, green: 0.84, blue: 0.29) // Vivid Green
         case .warning:
-            return .orange
+            return Color(red: 1.00, green: 0.80, blue: 0.00) // Vivid Yellow
         case .critical:
-            return .red
+            return Color(red: 1.00, green: 0.27, blue: 0.23) // Vivid Red
         case .unknown:
             return .gray
+        }
+    }
+    
+    public static func status(for remainingPercent: Double) -> HealthStatus {
+        if remainingPercent > 60.0 {
+            return .healthy
+        } else if remainingPercent >= 25.0 {
+            return .warning
+        } else {
+            return .critical
         }
     }
 }
@@ -26,7 +36,7 @@ public enum HealthStatus: String, Codable, Sendable {
 public struct QuotaWindow: Identifiable, Codable, Sendable {
     public var id: String { name }
     
-    /// Title / label of this window (e.g. "5-hour limit", "Weekly · all models")
+    /// Title / label of this window (e.g. "5-hour limit", "Weekly")
     public let name: String
     
     /// Configured window duration in hours (e.g. 5.0 for a 5-hour window, 168.0 for weekly)
@@ -38,6 +48,11 @@ public struct QuotaWindow: Identifiable, Codable, Sendable {
     /// Percentage remaining (0.0 to 100.0)
     public var remainingPercent: Double {
         max(0.0, min(100.0, 100.0 - usedPercent))
+    }
+    
+    /// Health status derived from remaining percentage (>60% green, 25-60% yellow, <25% red)
+    public var healthStatus: HealthStatus {
+        HealthStatus.status(for: remainingPercent)
     }
     
     /// Optional absolute count (e.g., tokens or prompt requests)
@@ -128,13 +143,6 @@ public struct ProviderUsage: Identifiable, Sendable {
     /// Overall health status derived from remaining quota on the short window
     public var healthStatus: HealthStatus {
         if errorMessage != nil { return .unknown }
-        let remaining = shortWindow.remainingPercent
-        if remaining > 30.0 {
-            return .healthy
-        } else if remaining > 10.0 {
-            return .warning
-        } else {
-            return .critical
-        }
+        return shortWindow.healthStatus
     }
 }

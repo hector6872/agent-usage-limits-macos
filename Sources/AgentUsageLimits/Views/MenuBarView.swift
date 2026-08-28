@@ -36,7 +36,7 @@ public struct MenuBarView: View {
     }
 }
 
-/// Individual provider item in the menu bar
+/// Individual provider item in the menu bar with strict tabular alignment and 0% red highlight
 struct ProviderMenuBarItem: View {
     let usage: ProviderUsage
     let isDarkMode: Bool
@@ -45,55 +45,41 @@ struct ProviderMenuBarItem: View {
         isDarkMode ? .white : .black
     }
     
-    private var secondaryColor: Color {
-        isDarkMode ? .white.opacity(0.85) : .black.opacity(0.85)
-    }
-    
     var body: some View {
         if usage.showWeeklyInMenuBar {
-            // Dual-line layout: Icon with sub-index "1" on the left, stacked percentages on the right
+            // Dual-line layout: Icon + [Dot / W column] + [Right-aligned % column]
             HStack(alignment: .center, spacing: 3.5) {
-                // Left column: Icon + tiny subscript index "1"
-                VStack(alignment: .center, spacing: 0) {
-                    BrandIconView(symbol: usage.iconSymbol, size: 12, color: primaryColor)
+                // 1. Vertically centered Brand Icon
+                BrandIconView(symbol: usage.iconSymbol, size: 12.5, color: primaryColor)
+                
+                // 2. Indicators Column (Centered Dot & Centered W)
+                VStack(alignment: .center, spacing: 1) {
+                    Circle()
+                        .fill(usage.shortWindow.healthStatus.color)
+                        .frame(width: 4.5, height: 4.5)
+                        .frame(width: 8, height: 9.5, alignment: .center)
                     
-                    Text("1")
-                        .font(.system(size: 7, weight: .regular, design: .rounded))
-                        .foregroundColor(secondaryColor)
+                    Text("W")
+                        .font(.system(size: 7.5, weight: .bold, design: .rounded))
+                        .foregroundColor(usage.weeklyWindow.healthStatus.color)
+                        .frame(width: 8, height: 9.5, alignment: .center)
                 }
                 
-                // Right column: Top session % (with dot) & Bottom weekly % (with triangle arrow)
-                VStack(alignment: .leading, spacing: 0) {
-                    // Top: Session remaining % with health dot
-                    HStack(spacing: 2.5) {
-                        Circle()
-                            .fill(usage.healthStatus.color)
-                            .frame(width: 4.5, height: 4.5)
-                        
-                        Text("\(Int(usage.shortWindow.remainingPercent))%")
-                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                            .foregroundColor(primaryColor)
-                    }
+                // 3. Percentages Column (Trailing-aligned numbers; turns red if 0%)
+                VStack(alignment: .trailing, spacing: 1) {
+                    let shortRemaining = Int(usage.shortWindow.remainingPercent)
+                    Text("\(shortRemaining)%")
+                        .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                        .frame(height: 9.5, alignment: .trailing)
                     
-                    // Bottom: Weekly % with directional triangle indicator
-                    HStack(spacing: 2) {
-                        let weeklyRemaining = Int(usage.weeklyWindow.remainingPercent)
-                        if weeklyRemaining <= 15 {
-                            Image(systemName: "arrowtriangle.up.fill")
-                                .font(.system(size: 5))
-                                .foregroundColor(.red)
-                            Text("\(weeklyRemaining)%")
-                                .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                                .foregroundColor(primaryColor)
-                        } else {
-                            Image(systemName: "arrowtriangle.down.fill")
-                                .font(.system(size: 5))
-                                .foregroundColor(.green)
-                            Text("\(Int(usage.weeklyWindow.usedPercent))%")
-                                .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                                .foregroundColor(primaryColor)
-                        }
-                    }
+                    let weeklyRemaining = Int(usage.weeklyWindow.remainingPercent)
+                    Text("\(weeklyRemaining)%")
+                        .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(weeklyRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                        .frame(height: 9.5, alignment: .trailing)
                 }
             }
         } else {
@@ -102,12 +88,14 @@ struct ProviderMenuBarItem: View {
                 BrandIconView(symbol: usage.iconSymbol, size: 13, color: primaryColor)
                 
                 Circle()
-                    .fill(usage.healthStatus.color)
+                    .fill(usage.shortWindow.healthStatus.color)
                     .frame(width: 5, height: 5)
                 
-                Text("\(Int(usage.shortWindow.remainingPercent))%")
+                let shortRemaining = Int(usage.shortWindow.remainingPercent)
+                Text("\(shortRemaining)%")
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundColor(primaryColor)
+                    .monospacedDigit()
+                    .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
             }
         }
     }
