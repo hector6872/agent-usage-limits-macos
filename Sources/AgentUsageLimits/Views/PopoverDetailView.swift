@@ -95,7 +95,7 @@ public struct PopoverDetailView: View {
                 Spacer()
                 Picker("", selection: $l10n.currentLanguage) {
                     ForEach(AppLanguage.allCases) { lang in
-                        Text(lang.displayName).tag(lang)
+                        Text(lang.localizedName(with: l10n)).tag(lang)
                     }
                 }
                 .pickerStyle(.menu)

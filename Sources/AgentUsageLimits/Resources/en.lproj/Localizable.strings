@@ -18,6 +18,7 @@
 /* Settings Drawer */
 "providers_header" = "PROVIDERS";
 "language_label" = "Language";
+"language_system" = "System";
 "refresh_interval" = "Refresh interval";
 "quit_app" = "Quit Application";
 
