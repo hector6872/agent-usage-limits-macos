@@ -4,10 +4,12 @@ import SwiftUI
 public struct BrandIconView: View {
     public let symbol: String
     public var size: CGFloat = 13
+    public var color: Color = .primary
     
-    public init(symbol: String, size: CGFloat = 13) {
+    public init(symbol: String, size: CGFloat = 13, color: Color = .primary) {
         self.symbol = symbol
         self.size = size
+        self.color = color
     }
     
     public var body: some View {
@@ -15,43 +17,48 @@ public struct BrandIconView: View {
             switch symbol {
             case "antigravity.wave":
                 AntigravityWaveShape()
-                    .stroke(Color.primary, style: StrokeStyle(lineWidth: size * 0.16, lineCap: .round, lineJoin: .round))
+                    .stroke(color, style: StrokeStyle(lineWidth: size * 0.18, lineCap: .round, lineJoin: .round))
                     .frame(width: size, height: size * 0.85)
             case "claude.sun":
                 ClaudeSunShape()
-                    .stroke(Color.primary, style: StrokeStyle(lineWidth: size * 0.1, lineCap: .round))
+                    .stroke(color, style: StrokeStyle(lineWidth: size * 0.11, lineCap: .round))
                     .frame(width: size, height: size)
             case "codex.chevron":
                 CodexIconShape()
-                    .stroke(Color.primary, style: StrokeStyle(lineWidth: size * 0.12, lineCap: .round, lineJoin: .round))
+                    .stroke(color, style: StrokeStyle(lineWidth: size * 0.14, lineCap: .round, lineJoin: .round))
+                    .frame(width: size, height: size)
+            case "chatgpt.swirl":
+                ChatGPTRosetteShape()
+                    .stroke(color, style: StrokeStyle(lineWidth: size * 0.10, lineCap: .round))
                     .frame(width: size, height: size)
             default:
                 Image(systemName: symbol)
                     .resizable()
                     .scaledToFit()
+                    .foregroundColor(color)
                     .frame(width: size, height: size)
             }
         }
     }
 }
 
-/// Antigravity chevron / wave logo
+/// Antigravity chevron / wave logo (peaked wave curve)
 struct AntigravityWaveShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         let w = rect.width
         let h = rect.height
         
-        path.move(to: CGPoint(x: w * 0.05, y: h * 0.95))
+        path.move(to: CGPoint(x: w * 0.08, y: h * 0.92))
         path.addCurve(
-            to: CGPoint(x: w * 0.5, y: h * 0.1),
-            control1: CGPoint(x: w * 0.2, y: h * 0.85),
-            control2: CGPoint(x: w * 0.35, y: h * 0.1)
+            to: CGPoint(x: w * 0.5, y: h * 0.08),
+            control1: CGPoint(x: w * 0.22, y: h * 0.82),
+            control2: CGPoint(x: w * 0.36, y: h * 0.08)
         )
         path.addCurve(
-            to: CGPoint(x: w * 0.95, y: h * 0.95),
-            control1: CGPoint(x: w * 0.65, y: h * 0.1),
-            control2: CGPoint(x: w * 0.8, y: h * 0.85)
+            to: CGPoint(x: w * 0.92, y: h * 0.92),
+            control1: CGPoint(x: w * 0.64, y: h * 0.08),
+            control2: CGPoint(x: w * 0.78, y: h * 0.82)
         )
         return path
     }
@@ -63,7 +70,7 @@ struct ClaudeSunShape: Shape {
         var path = Path()
         let center = CGPoint(x: rect.midX, y: rect.midY)
         let rays = 12
-        let innerRadius = rect.width * 0.2
+        let innerRadius = rect.width * 0.18
         let outerRadius = rect.width * 0.48
         
         for i in 0..<rays {
@@ -78,10 +85,10 @@ struct ClaudeSunShape: Shape {
         }
         
         path.addEllipse(in: CGRect(
-            x: center.x - innerRadius * 0.7,
-            y: center.y - innerRadius * 0.7,
-            width: innerRadius * 1.4,
-            height: innerRadius * 1.4
+            x: center.x - innerRadius * 0.75,
+            y: center.y - innerRadius * 0.75,
+            width: innerRadius * 1.5,
+            height: innerRadius * 1.5
         ))
         
         return path
@@ -96,14 +103,39 @@ struct CodexIconShape: Shape {
         let h = rect.height
         
         // Left prompt bracket >
-        path.move(to: CGPoint(x: w * 0.15, y: h * 0.25))
-        path.addLine(to: CGPoint(x: w * 0.5, y: h * 0.5))
-        path.addLine(to: CGPoint(x: w * 0.15, y: h * 0.75))
+        path.move(to: CGPoint(x: w * 0.12, y: h * 0.22))
+        path.addLine(to: CGPoint(x: w * 0.52, y: h * 0.50))
+        path.addLine(to: CGPoint(x: w * 0.12, y: h * 0.78))
         
         // Cursor line _
-        path.move(to: CGPoint(x: w * 0.58, y: h * 0.75))
-        path.addLine(to: CGPoint(x: w * 0.88, y: h * 0.75))
+        path.move(to: CGPoint(x: w * 0.60, y: h * 0.78))
+        path.addLine(to: CGPoint(x: w * 0.90, y: h * 0.78))
         
+        return path
+    }
+}
+
+/// ChatGPT rosette swirl shape
+struct ChatGPTRosetteShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let petals = 6
+        let r = rect.width * 0.36
+        
+        for i in 0..<petals {
+            let angle = Double(i) * (2 * Double.pi / Double(petals))
+            let pCenter = CGPoint(
+                x: center.x + CGFloat(cos(angle)) * (r * 0.5),
+                y: center.y + CGFloat(sin(angle)) * (r * 0.5)
+            )
+            path.addEllipse(in: CGRect(
+                x: pCenter.x - r * 0.5,
+                y: pCenter.y - r * 0.5,
+                width: r,
+                height: r
+            ))
+        }
         return path
     }
 }

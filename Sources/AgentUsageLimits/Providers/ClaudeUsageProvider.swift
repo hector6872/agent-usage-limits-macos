@@ -17,14 +17,14 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
     
     public func fetchUsage() async throws -> ProviderUsage {
         let now = Date()
-        let shortResetDate = now.addingTimeInterval(3600 * 2.2) // resets in ~2h
-        let weeklyResetDate = now.addingTimeInterval(86400 * 3.4) // resets in ~3d
+        let shortResetDate = now.addingTimeInterval(3600 * 2.2)
+        let weeklyResetDate = now.addingTimeInterval(86400 * 3.4)
         
         let shortWindow = QuotaWindow(
             name: "\(Int(shortWindowDurationHours))-hour limit",
             windowDurationHours: shortWindowDurationHours,
-            usedPercent: 42.0,
-            usedUnits: 210,
+            usedPercent: 58.0, // 42% remaining
+            usedUnits: 290,
             totalUnits: 500,
             unitLabel: "msgs",
             resetDate: shortResetDate
@@ -33,7 +33,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         let weeklyWindow = QuotaWindow(
             name: "Weekly · all models",
             windowDurationHours: 168.0,
-            usedPercent: 7.0,
+            usedPercent: 7.0, // 7% used
             usedUnits: 350,
             totalUnits: 5000,
             unitLabel: "msgs",
@@ -46,6 +46,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
             iconSymbol: iconSymbol,
             shortWindow: shortWindow,
             weeklyWindow: weeklyWindow,
+            showWeeklyInMenuBar: true,
             lastUpdated: now
         )
     }

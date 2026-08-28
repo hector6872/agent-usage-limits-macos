@@ -98,6 +98,9 @@ public struct ProviderUsage: Identifiable, Sendable {
     /// Long-term weekly window
     public let weeklyWindow: QuotaWindow
     
+    /// Whether to display the dual-line weekly metric in the compact menu bar
+    public let showWeeklyInMenuBar: Bool
+    
     public let lastUpdated: Date
     public let errorMessage: String?
 
@@ -107,6 +110,7 @@ public struct ProviderUsage: Identifiable, Sendable {
         iconSymbol: String,
         shortWindow: QuotaWindow,
         weeklyWindow: QuotaWindow,
+        showWeeklyInMenuBar: Bool = true,
         lastUpdated: Date = Date(),
         errorMessage: String? = nil
     ) {
@@ -115,6 +119,7 @@ public struct ProviderUsage: Identifiable, Sendable {
         self.iconSymbol = iconSymbol
         self.shortWindow = shortWindow
         self.weeklyWindow = weeklyWindow
+        self.showWeeklyInMenuBar = showWeeklyInMenuBar
         self.lastUpdated = lastUpdated
         self.errorMessage = errorMessage
     }

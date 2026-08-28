@@ -17,13 +17,13 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
     
     public func fetchUsage() async throws -> ProviderUsage {
         let now = Date()
-        let shortResetDate = now.addingTimeInterval(3600 * 3.0) // resets in ~3h
-        let weeklyResetDate = now.addingTimeInterval(86400 * 5.1) // resets in ~5d
+        let shortResetDate = now.addingTimeInterval(3600 * 3.0)
+        let weeklyResetDate = now.addingTimeInterval(86400 * 5.1)
         
         let shortWindow = QuotaWindow(
             name: "\(Int(shortWindowDurationHours))-hour limit",
             windowDurationHours: shortWindowDurationHours,
-            usedPercent: 46.0,
+            usedPercent: 54.0, // 46% remaining
             usedUnits: 92000,
             totalUnits: 200000,
             unitLabel: "tok",
@@ -46,6 +46,7 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
             iconSymbol: iconSymbol,
             shortWindow: shortWindow,
             weeklyWindow: weeklyWindow,
+            showWeeklyInMenuBar: false, // Matches reference screenshot (single line)
             lastUpdated: now
         )
     }
