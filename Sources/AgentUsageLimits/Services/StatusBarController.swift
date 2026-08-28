@@ -2,36 +2,52 @@ import SwiftUI
 import AppKit
 import Combine
 
-/// Native AppKit Status Bar Controller using ImageRenderer to produce native NSStatusBarButton images
-/// Automatically adapts to Light and Dark system themes in real-time
+/// Borderless, clean floating panel without the popover top triangle arrow
+final class MenuBarPanel: NSPanel {
+    init(contentViewController: NSViewController) {
+        super.init(
+            contentRect: .zero,
+            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        self.isFloatingPanel = true
+        self.level = .statusBar
+        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        self.titleVisibility = .hidden
+        self.titlebarAppearsTransparent = true
+        self.isMovable = false
+        self.isMovableByWindowBackground = false
+        self.isOpaque = false
+        self.backgroundColor = .clear
+        self.hasShadow = true
+        self.contentViewController = contentViewController
+    }
+    
+    override var canBecomeKey: Bool {
+        return true
+    }
+}
+
+/// Native AppKit Status Bar Controller using ImageRenderer and clean floating panel without popover arrow
 @MainActor
-public final class StatusBarController: NSObject, NSPopoverDelegate {
+public final class StatusBarController: NSObject {
     private var statusItem: NSStatusItem
-    private var popover: NSPopover
     private var usageManager: UsageManager
     private var cancellables = Set<AnyCancellable>()
+    private var panel: MenuBarPanel?
+    private var eventMonitor: Any?
     
     public init(usageManager: UsageManager) {
         self.usageManager = usageManager
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        self.popover = NSPopover()
         
         super.init()
         
-        setupPopover()
         setupStatusButton()
         observeUsageChanges()
         observeThemeChanges()
         renderStatusImage()
-    }
-    
-    private func setupPopover() {
-        popover.delegate = self
-        popover.behavior = .transient
-        popover.animates = true
-        popover.contentViewController = NSHostingController(
-            rootView: PopoverDetailView(usageManager: usageManager)
-        )
     }
     
     private func setupStatusButton() {
@@ -55,7 +71,6 @@ public final class StatusBarController: NSObject, NSPopoverDelegate {
     }
     
     private func observeThemeChanges() {
-        // Listen to system theme changes (Light Mode <-> Dark Mode)
         DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name("AppleInterfaceThemeChangedNotification"),
             object: nil,
@@ -99,16 +114,63 @@ public final class StatusBarController: NSObject, NSPopoverDelegate {
     }
     
     @objc public func togglePopover(_ sender: AnyObject?) {
-        guard let button = statusItem.button else { return }
-        
-        if popover.isShown {
-            popover.performClose(sender)
+        if let panel = panel, panel.isVisible {
+            closePanel()
         } else {
-            popover.contentViewController = NSHostingController(
-                rootView: PopoverDetailView(usageManager: usageManager)
-            )
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
+            showPanel()
         }
+    }
+    
+    private func showPanel() {
+        guard let button = statusItem.button, let buttonWindow = button.window else { return }
+        
+        let hostingController = NSHostingController(
+            rootView: PopoverDetailView(usageManager: usageManager)
+        )
+        let panel = MenuBarPanel(contentViewController: hostingController)
+        self.panel = panel
+        
+        let targetSize = hostingController.view.fittingSize
+        let buttonScreenRect = buttonWindow.convertToScreen(button.bounds)
+        
+        // Position panel right beneath the status item button
+        let x = buttonScreenRect.midX - (targetSize.width / 2.0)
+        let y = buttonScreenRect.minY - targetSize.height - 4.0
+        
+        let screenFrame = buttonWindow.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect.zero
+        let clampedX = min(max(screenFrame.minX + 8, x), screenFrame.maxX - targetSize.width - 8)
+        
+        panel.setFrame(NSRect(x: clampedX, y: y, width: targetSize.width, height: targetSize.height), display: true)
+        panel.alphaValue = 0
+        panel.orderFrontRegardless()
+        panel.makeKey()
+        
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.10
+            panel.animator().alphaValue = 1.0
+        }
+        
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            self?.closePanel()
+        }
+    }
+    
+    private func closePanel() {
+        guard let panel = panel, panel.isVisible else { return }
+        
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
+        
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.08
+            panel.animator().alphaValue = 0.0
+        }, completionHandler: {
+            Task { @MainActor [weak self] in
+                panel.orderOut(nil)
+                self?.panel = nil
+            }
+        })
     }
 }

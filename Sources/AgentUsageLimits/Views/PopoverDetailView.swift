@@ -45,7 +45,15 @@ public struct PopoverDetailView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .frame(width: 330)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(NSColor.windowBackgroundColor))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
     
     // MARK: - Empty State

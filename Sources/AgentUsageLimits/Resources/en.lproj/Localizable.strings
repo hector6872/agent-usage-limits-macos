@@ -1,11 +1,11 @@
 /* English Translations */
 
 /* Header & Section */
-"usage_limits_header" = "YOUR USAGE LIMITS · %@";
+"usage_limits_header" = "%@";
 
 /* Quota Windows */
-"short_limit_title" = "%d-hour limit";
-"weekly_limit_title" = "Weekly · all models";
+"short_limit_title" = "%@-hour limit";
+"weekly_limit_title" = "Weekly";
 
 /* Reset countdowns */
 "resets_soon" = "resets soon";

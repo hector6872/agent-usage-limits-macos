@@ -76,8 +76,9 @@ public struct QuotaWindow: Identifiable, Codable, Sendable {
     @MainActor
     public var localizedTitle: String {
         if let hours = windowDurationHours, hours < 24 {
-            return LocalizationManager.shared.string("short_limit_title", Int(hours))
-        } else if windowDurationHours == 168.0 || name.contains("Weekly") {
+            let hoursStr = hours.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(hours))" : String(format: "%.1f", hours)
+            return LocalizationManager.shared.string("short_limit_title", hoursStr)
+        } else if windowDurationHours == 168.0 || name.lowercased().contains("weekly") || name.lowercased().contains("semanal") {
             return LocalizationManager.shared["weekly_limit_title"]
         }
         return name
