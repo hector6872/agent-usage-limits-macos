@@ -2,20 +2,39 @@ import SwiftUI
 import AppKit
 import Combine
 
-/// Borderless, clean floating panel without the popover top triangle arrow
+/// Custom transparent overlay that intercepts clicks to prevent NSStatusBarButton from drawing rectangular box highlights
+final class StatusItemOverlayView: NSView {
+    var onClick: (() -> Void)?
+    
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        return self
+    }
+    
+    override func mouseDown(with event: NSEvent) {
+        onClick?()
+    }
+    
+    override func rightMouseDown(with event: NSEvent) {
+        onClick?()
+    }
+    
+    override func draw(_ dirtyRect: NSRect) {
+        // Zero custom or default highlight drawing
+    }
+}
+
+/// Borderless, clean floating panel without titlebar and without popover top triangle arrow
 final class MenuBarPanel: NSPanel {
     init(contentViewController: NSViewController) {
         super.init(
             contentRect: .zero,
-            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         self.isFloatingPanel = true
         self.level = .statusBar
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        self.titleVisibility = .hidden
-        self.titlebarAppearsTransparent = true
         self.isMovable = false
         self.isMovableByWindowBackground = false
         self.isOpaque = false
@@ -29,13 +48,27 @@ final class MenuBarPanel: NSPanel {
     }
 }
 
-/// Native AppKit Status Bar Controller using ImageRenderer and clean floating panel without popover arrow
+/// Custom hosting controller that dynamically reports content size changes when settings expand/collapse
+final class AutoSizingHostingController: NSHostingController<PopoverDetailView> {
+    var onSizeChanged: ((CGSize) -> Void)?
+    
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        let fittingSize = view.fittingSize
+        if fittingSize.height > 0 {
+            onSizeChanged?(fittingSize)
+        }
+    }
+}
+
+/// Native AppKit Status Bar Controller using ImageRenderer and clean auto-sizing floating panel
 @MainActor
 public final class StatusBarController: NSObject {
     private var statusItem: NSStatusItem
     private var usageManager: UsageManager
     private var cancellables = Set<AnyCancellable>()
     private var panel: MenuBarPanel?
+    private var hostingController: AutoSizingHostingController?
     private var eventMonitor: Any?
     
     public init(usageManager: UsageManager) {
@@ -53,10 +86,28 @@ public final class StatusBarController: NSObject {
     private func setupStatusButton() {
         guard let button = statusItem.button else { return }
         
-        button.target = self
-        button.action = #selector(togglePopover(_:))
-        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        button.isBordered = false
+        button.wantsLayer = true
+        if let cell = button.cell as? NSButtonCell {
+            cell.highlightsBy = []
+            cell.showsBorderOnlyWhileMouseInside = false
+        }
+        
         button.subviews.forEach { $0.removeFromSuperview() }
+        
+        let overlay = StatusItemOverlayView()
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.onClick = { [weak self] in
+            self?.togglePopover()
+        }
+        
+        button.addSubview(overlay)
+        NSLayoutConstraint.activate([
+            overlay.leadingAnchor.constraint(equalTo: button.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: button.trailingAnchor),
+            overlay.topAnchor.constraint(equalTo: button.topAnchor),
+            overlay.bottomAnchor.constraint(equalTo: button.bottomAnchor)
+        ])
     }
     
     private func observeUsageChanges() {
@@ -113,7 +164,7 @@ public final class StatusBarController: NSObject {
         }
     }
     
-    @objc public func togglePopover(_ sender: AnyObject?) {
+    public func togglePopover() {
         if let panel = panel, panel.isVisible {
             closePanel()
         } else {
@@ -122,25 +173,25 @@ public final class StatusBarController: NSObject {
     }
     
     private func showPanel() {
-        guard let button = statusItem.button, let buttonWindow = button.window else { return }
+        guard let button = statusItem.button, button.window != nil else { return }
         
-        let hostingController = NSHostingController(
+        let hosting = AutoSizingHostingController(
             rootView: PopoverDetailView(usageManager: usageManager)
         )
-        let panel = MenuBarPanel(contentViewController: hostingController)
+        self.hostingController = hosting
+        
+        let panel = MenuBarPanel(contentViewController: hosting)
         self.panel = panel
         
-        let targetSize = hostingController.view.fittingSize
-        let buttonScreenRect = buttonWindow.convertToScreen(button.bounds)
+        hosting.onSizeChanged = { [weak self] size in
+            Task { @MainActor [weak self] in
+                self?.updatePanelFrame(for: size)
+            }
+        }
         
-        // Position panel right beneath the status item button
-        let x = buttonScreenRect.midX - (targetSize.width / 2.0)
-        let y = buttonScreenRect.minY - targetSize.height - 4.0
+        let initialSize = hosting.view.fittingSize
+        updatePanelFrame(for: initialSize)
         
-        let screenFrame = buttonWindow.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect.zero
-        let clampedX = min(max(screenFrame.minX + 8, x), screenFrame.maxX - targetSize.width - 8)
-        
-        panel.setFrame(NSRect(x: clampedX, y: y, width: targetSize.width, height: targetSize.height), display: true)
         panel.alphaValue = 0
         panel.orderFrontRegardless()
         panel.makeKey()
@@ -152,6 +203,36 @@ public final class StatusBarController: NSObject {
         
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             self?.closePanel()
+        }
+    }
+    
+    private func updatePanelFrame(for size: CGSize) {
+        guard let panel = panel, let button = statusItem.button, let buttonWindow = button.window else { return }
+        guard size.height > 0 else { return }
+        
+        let screen = buttonWindow.screen ?? NSScreen.main ?? NSScreen.screens[0]
+        let width: CGFloat = 330
+        let height: CGFloat = size.height
+        
+        // Exact bottom edge of the macOS menu bar on this screen
+        let menuBarBottomY = screen.visibleFrame.maxY
+        let y = menuBarBottomY - height - 4.0 // Exactly 4pt below menu bar
+        
+        let buttonRectOnScreen = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
+        let x = buttonRectOnScreen.midX - (width / 2.0)
+        let clampedX = min(max(screen.visibleFrame.minX + 8, x), screen.visibleFrame.maxX - width - 8)
+        
+        let targetFrame = NSRect(x: clampedX, y: y, width: width, height: height)
+        
+        if panel.frame.size != targetFrame.size || panel.frame.origin != targetFrame.origin {
+            if panel.isVisible {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.15
+                    panel.animator().setFrame(targetFrame, display: true)
+                }
+            } else {
+                panel.setFrame(targetFrame, display: true)
+            }
         }
     }
     
@@ -170,6 +251,7 @@ public final class StatusBarController: NSObject {
             Task { @MainActor [weak self] in
                 panel.orderOut(nil)
                 self?.panel = nil
+                self?.hostingController = nil
             }
         })
     }

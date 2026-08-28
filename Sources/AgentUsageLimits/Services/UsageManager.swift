@@ -2,16 +2,17 @@ import Foundation
 import SwiftUI
 import Combine
 
-/// Central manager that coordinates all quota providers and manages periodic polling.
+/// Central manager that coordinates all quota providers, manages periodic polling, and persists preferences.
 @MainActor
 public final class UsageManager: ObservableObject {
     @Published public private(set) var usages: [String: ProviderUsage] = [:]
     @Published public private(set) var isRefreshing: Bool = false
     @Published public private(set) var lastRefreshedDate: Date = Date()
     
-    /// Auto-refresh interval (default 3 minutes = 180 seconds)
+    /// Auto-refresh interval persisted in UserDefaults (default 3 minutes = 180 seconds)
     @Published public var refreshIntervalSeconds: TimeInterval = 180.0 {
         didSet {
+            UserDefaults.standard.set(refreshIntervalSeconds, forKey: "refresh_interval_seconds")
             setupTimer()
         }
     }
@@ -22,6 +23,12 @@ public final class UsageManager: ObservableObject {
     private var timerTask: Task<Void, Never>?
     
     public init(providers: [any UsageProvider] = []) {
+        // Load saved refresh interval
+        let savedInterval = UserDefaults.standard.double(forKey: "refresh_interval_seconds")
+        if savedInterval > 0 {
+            self.refreshIntervalSeconds = savedInterval
+        }
+        
         if providers.isEmpty {
             // Default built-in providers: Antigravity, Claude, Codex
             self.providers = [
@@ -31,6 +38,14 @@ public final class UsageManager: ObservableObject {
             ]
         } else {
             self.providers = providers
+        }
+        
+        // Restore saved isEnabled preferences for each provider
+        for i in 0..<self.providers.count {
+            let key = "provider_\(self.providers[i].id)_enabled"
+            if UserDefaults.standard.object(forKey: key) != nil {
+                self.providers[i].isEnabled = UserDefaults.standard.bool(forKey: key)
+            }
         }
         
         setupTimer()
@@ -71,17 +86,23 @@ public final class UsageManager: ObservableObject {
     /// Registers a new provider plugin dynamically
     public func register(provider: any UsageProvider) {
         if !providers.contains(where: { $0.id == provider.id }) {
-            providers.append(provider)
+            var newProvider = provider
+            let key = "provider_\(newProvider.id)_enabled"
+            if UserDefaults.standard.object(forKey: key) != nil {
+                newProvider.isEnabled = UserDefaults.standard.bool(forKey: key)
+            }
+            providers.append(newProvider)
             Task {
-                await refreshProvider(provider)
+                await refreshProvider(newProvider)
             }
         }
     }
     
-    /// Toggles whether a provider is enabled
+    /// Toggles whether a provider is enabled and saves preference
     public func toggleProvider(id: String) {
         if let index = providers.firstIndex(where: { $0.id == id }) {
             providers[index].isEnabled.toggle()
+            UserDefaults.standard.set(providers[index].isEnabled, forKey: "provider_\(id)_enabled")
             objectWillChange.send()
             if providers[index].isEnabled {
                 Task {
@@ -115,7 +136,7 @@ public final class UsageManager: ObservableObject {
                             displayName: provider.displayName,
                             iconSymbol: provider.iconSymbol,
                             shortWindow: QuotaWindow(name: "5-hour limit", usedPercent: 0),
-                            weeklyWindow: QuotaWindow(name: "Weekly · all models", usedPercent: 0),
+                            weeklyWindow: QuotaWindow(name: "Weekly", usedPercent: 0),
                             errorMessage: error.localizedDescription
                         )
                         return (provider.id, fallbackUsage)
@@ -141,7 +162,7 @@ public final class UsageManager: ObservableObject {
                 displayName: provider.displayName,
                 iconSymbol: provider.iconSymbol,
                 shortWindow: QuotaWindow(name: "5-hour limit", usedPercent: 0),
-                weeklyWindow: QuotaWindow(name: "Weekly · all models", usedPercent: 0),
+                weeklyWindow: QuotaWindow(name: "Weekly", usedPercent: 0),
                 errorMessage: error.localizedDescription
             )
         }
