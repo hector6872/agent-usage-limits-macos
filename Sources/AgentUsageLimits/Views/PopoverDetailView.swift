@@ -136,26 +136,26 @@ public struct PopoverDetailView: View {
     
     // MARK: - Footer
     private var footerView: some View {
-        HStack(alignment: .center) {
-            // Settings button on the left
+        HStack(alignment: .center, spacing: 8) {
+            Spacer()
+            
+            // Only render and tick the live badge if there is at least one active provider
+            if !usageManager.activeUsages.isEmpty {
+                LiveRefreshBadgeView(usageManager: usageManager, l10n: l10n)
+            }
+            
+            // Settings button on the far right
             Button {
                 withAnimation(.easeInOut(duration: 0.15)) {
                     showingSettings.toggle()
                 }
             } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: showingSettings ? "gearshape.fill" : "gearshape")
-                        .font(.system(size: 12))
-                }
-                .foregroundColor(.secondary)
+                Image(systemName: showingSettings ? "gearshape.fill" : "gearshape")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
             .help(l10n["providers_header"])
-            
-            Spacer()
-            
-            // Live-ticking badge with integrated refresh icon button
-            LiveRefreshBadgeView(usageManager: usageManager, l10n: l10n)
         }
     }
 }

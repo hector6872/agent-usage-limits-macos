@@ -83,12 +83,20 @@ public final class UsageManager: ObservableObject {
         if let index = providers.firstIndex(where: { $0.id == id }) {
             providers[index].isEnabled.toggle()
             objectWillChange.send()
+            if providers[index].isEnabled {
+                Task {
+                    await refreshProvider(providers[index])
+                }
+            }
         }
     }
     
     /// Refreshes all enabled providers concurrently
     public func refreshAll() async {
         guard !isRefreshing else { return }
+        let enabledProviders = providers.filter { $0.isEnabled }
+        guard !enabledProviders.isEmpty else { return }
+        
         isRefreshing = true
         defer { 
             isRefreshing = false 
@@ -96,7 +104,7 @@ public final class UsageManager: ObservableObject {
         }
         
         await withTaskGroup(of: (String, ProviderUsage?).self) { group in
-            for provider in providers where provider.isEnabled {
+            for provider in enabledProviders {
                 group.addTask {
                     do {
                         let usage = try await provider.fetchUsage()
