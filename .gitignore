@@ -1,0 +1,54 @@
+# =========================
+# macOS System Files
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# =========================
+# Swift & SwiftPM
+# =========================
+/.build/
+/Packages/
+.swiftpm/
+Package.resolved
+
+# =========================
+# Build & Distribution Artifacts
+# =========================
+/dist/
+*.app/
+*.dSYM/
+*.dmg
+
+# =========================
+# Generated Icon Sets
+# =========================
+resources/AppIcon.iconset/
+
+# =========================
+# Xcode & Derived Data
+# =========================
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+
+# =========================
+# IDEs & Editors
+# =========================
+.vscode/
+.idea/
+*.swp
+*~
+
+# =========================
+# Credentials & Secrets
+# =========================
+.env
+.env.*
+.netrc
