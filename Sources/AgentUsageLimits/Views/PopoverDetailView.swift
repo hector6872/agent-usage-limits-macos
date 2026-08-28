@@ -50,10 +50,10 @@ public struct PopoverDetailView: View {
     // MARK: - Empty State
     private var emptyStateView: some View {
         VStack(alignment: .center, spacing: 8) {
-            Text(l10n.noActiveProviders)
+            Text(l10n["no_active_providers"])
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.secondary)
-            Button(l10n.enableProvidersInSettings) {
+            Button(l10n["enable_providers_in_settings"]) {
                 withAnimation { showingSettings = true }
             }
             .buttonStyle(.link)
@@ -66,7 +66,7 @@ public struct PopoverDetailView: View {
     // MARK: - Settings View
     private var settingsView: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(l10n.providersHeader)
+            Text(l10n["providers_header"])
                 .font(.system(size: 10.5, weight: .semibold))
                 .foregroundColor(.secondary)
             
@@ -89,7 +89,7 @@ public struct PopoverDetailView: View {
             
             // Language selector
             HStack {
-                Text(l10n.languageLabel)
+                Text(l10n["language_label"])
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -105,7 +105,7 @@ public struct PopoverDetailView: View {
             
             // Refresh interval
             HStack {
-                Text(l10n.refreshInterval)
+                Text(l10n["refresh_interval"])
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -121,7 +121,7 @@ public struct PopoverDetailView: View {
             }
             .padding(.top, 2)
             
-            Button(l10n.quitApp) {
+            Button(l10n["quit_app"]) {
                 NSApplication.shared.terminate(nil)
             }
             .buttonStyle(.plain)
@@ -143,7 +143,7 @@ public struct PopoverDetailView: View {
                 }
             } label: {
                 HStack(spacing: 4) {
-                    Text(l10n.refresh)
+                    Text(l10n["refresh"])
                         .font(.system(size: 13, weight: .regular))
                     if usageManager.isRefreshing {
                         ProgressView()
@@ -169,8 +169,8 @@ public struct PopoverDetailView: View {
             .buttonStyle(.plain)
             .padding(.trailing, 6)
             
-            // "Updated just now" / "Actualizado ahora" Pill Tag
-            Text(timeAgoFormatted(since: usageManager.lastRefreshedDate))
+            // Native time ago pill tag
+            Text(l10n.timeAgo(since: usageManager.lastRefreshedDate))
                 .font(.system(size: 11.5, weight: .regular))
                 .foregroundColor(.primary.opacity(0.75))
                 .padding(.horizontal, 10)
@@ -179,18 +179,6 @@ public struct PopoverDetailView: View {
                     Capsule()
                         .fill(Color.primary.opacity(0.08))
                 )
-        }
-    }
-    
-    private func timeAgoFormatted(since date: Date) -> String {
-        let seconds = Int(Date().timeIntervalSince(date))
-        if seconds < 10 {
-            return l10n.updatedJustNow
-        } else if seconds < 60 {
-            return l10n.updatedSecondsAgo(seconds)
-        } else {
-            let mins = seconds / 60
-            return l10n.updatedMinutesAgo(mins)
         }
     }
 }
@@ -206,7 +194,7 @@ struct ProviderSectionView: View {
         VStack(alignment: .leading, spacing: 10) {
             // Section Header: "YOUR USAGE LIMITS · PROVIDER" / "TUS LÍMITES DE USO · PROVIDER"
             HStack(spacing: 5) {
-                Text(l10n.yourUsageLimits(provider: usage.displayName))
+                Text(l10n.string("usage_limits_header", usage.displayName.uppercased()))
                     .font(.system(size: 11.5, weight: .bold))
                     .foregroundColor(.secondary.opacity(0.85))
                     .tracking(0.3)

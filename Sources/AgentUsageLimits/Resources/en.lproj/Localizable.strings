@@ -9,15 +9,11 @@
 
 /* Reset countdowns */
 "resets_soon" = "resets soon";
-"resets_days" = "resets %dd";
-"resets_hours" = "resets %dh";
-"resets_minutes" = "resets %dm";
+"resets_prefix" = "resets";
 
 /* Action buttons & Timestamps */
 "refresh" = "Refresh";
 "updated_just_now" = "Updated just now";
-"updated_seconds_ago" = "Updated %ds ago";
-"updated_minutes_ago" = "Updated %dm ago";
 
 /* Settings Drawer */
 "providers_header" = "PROVIDERS";

@@ -66,23 +66,19 @@ public struct QuotaWindow: Identifiable, Codable, Sendable {
         self.resetDate = resetDate
     }
 
-    /// Compact format localized reset string: e.g. "resets 2h" / "reinicia en 2h"
+    /// Localized countdown string for quota resets
     @MainActor
     public var localizedResetsFormatted: String {
-        guard let resetDate = resetDate else {
-            return LocalizationManager.shared.resetsFormatted(interval: 0)
-        }
-        let interval = resetDate.timeIntervalSince(Date())
-        return LocalizationManager.shared.resetsFormatted(interval: interval)
+        LocalizationManager.shared.resetsCountdown(until: resetDate)
     }
     
-    /// Localized title if matching known window types
+    /// Localized title if matching standard window types
     @MainActor
     public var localizedTitle: String {
         if let hours = windowDurationHours, hours < 24 {
-            return LocalizationManager.shared.shortLimitTitle(hours: Int(hours))
+            return LocalizationManager.shared.string("short_limit_title", Int(hours))
         } else if windowDurationHours == 168.0 || name.contains("Weekly") {
-            return LocalizationManager.shared.weeklyLimitTitle
+            return LocalizationManager.shared["weekly_limit_title"]
         }
         return name
     }

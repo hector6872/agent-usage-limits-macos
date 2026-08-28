@@ -9,15 +9,11 @@
 
 /* Reset countdowns */
 "resets_soon" = "reinicia pronto";
-"resets_days" = "reinicia en %dd";
-"resets_hours" = "reinicia en %dh";
-"resets_minutes" = "reinicia en %dm";
+"resets_prefix" = "reinicia en";
 
 /* Action buttons & Timestamps */
 "refresh" = "Actualizar";
 "updated_just_now" = "Actualizado ahora";
-"updated_seconds_ago" = "Actualizado hace %ds";
-"updated_minutes_ago" = "Actualizado hace %dm";
 
 /* Settings Drawer */
 "providers_header" = "PROVEEDORES";

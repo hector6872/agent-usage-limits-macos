@@ -22,7 +22,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// Central Localization Manager that loads standard Localizable.strings from SPM resource bundles
+/// Central Localization Manager that handles bundle resolution and standard Foundation date/time formatters.
 @MainActor
 public final class LocalizationManager: ObservableObject {
     public static let shared = LocalizationManager()
@@ -37,6 +37,12 @@ public final class LocalizationManager: ObservableObject {
     }
     
     private var activeBundle: Bundle = Bundle.module
+    
+    private lazy var relativeDateFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter
+    }()
     
     public init() {
         if let lang = AppLanguage(rawValue: UserDefaults.standard.string(forKey: "selected_app_language") ?? "system") {
@@ -71,8 +77,10 @@ public final class LocalizationManager: ObservableObject {
         }
     }
     
-    /// Generic string localization helper from Localizable.strings
-    public func string(forKey key: String, _ args: CVarArg...) -> String {
+    // MARK: - Idiomatic Localization Access
+    
+    /// Look up a localized string with optional format arguments
+    public func string(_ key: String, _ args: CVarArg...) -> String {
         let format = activeBundle.localizedString(forKey: key, value: nil, table: "Localizable")
         if args.isEmpty {
             return format
@@ -80,74 +88,42 @@ public final class LocalizationManager: ObservableObject {
         return String(format: format, locale: Locale(identifier: resolvedCode), arguments: args)
     }
     
-    // MARK: - Convenient Accessors
-    
-    public func yourUsageLimits(provider: String) -> String {
-        string(forKey: "usage_limits_header", provider.uppercased())
+    /// Subscript shorthand: `l10n["refresh"]`
+    public subscript(key: String) -> String {
+        string(key)
     }
     
-    public func shortLimitTitle(hours: Int) -> String {
-        string(forKey: "short_limit_title", hours)
-    }
+    // MARK: - Native Foundation Formatters
     
-    public var weeklyLimitTitle: String {
-        string(forKey: "weekly_limit_title")
-    }
-    
-    public func resetsFormatted(interval: TimeInterval) -> String {
-        if interval <= 0 {
-            return string(forKey: "resets_soon")
+    /// Relative time ago formatter using Foundation's RelativeDateTimeFormatter
+    public func timeAgo(since date: Date) -> String {
+        let seconds = abs(date.timeIntervalSinceNow)
+        if seconds < 10 {
+            return string("updated_just_now")
         }
+        relativeDateFormatter.locale = Locale(identifier: resolvedCode)
+        return relativeDateFormatter.localizedString(for: date, relativeTo: Date())
+    }
+    
+    /// Formats countdown remaining time for quota resets (e.g. "resets 2h", "reinicia en 2h")
+    public func resetsCountdown(until date: Date?) -> String {
+        guard let date = date else { return string("resets_soon") }
+        let interval = date.timeIntervalSinceNow
+        if interval <= 0 {
+            return string("resets_soon")
+        }
+        
+        let prefix = string("resets_prefix")
         let days = Int(interval) / 86400
         let hours = (Int(interval) % 86400) / 3600
         let minutes = (Int(interval) % 3600) / 60
         
         if days > 0 {
-            return string(forKey: "resets_days", days)
+            return "\(prefix) \(days)d"
         } else if hours > 0 {
-            return string(forKey: "resets_hours", hours)
+            return "\(prefix) \(hours)h"
         } else {
-            return string(forKey: "resets_minutes", max(1, minutes))
+            return "\(prefix) \(max(1, minutes))m"
         }
-    }
-    
-    public var refresh: String {
-        string(forKey: "refresh")
-    }
-    
-    public var updatedJustNow: String {
-        string(forKey: "updated_just_now")
-    }
-    
-    public func updatedSecondsAgo(_ s: Int) -> String {
-        string(forKey: "updated_seconds_ago", s)
-    }
-    
-    public func updatedMinutesAgo(_ m: Int) -> String {
-        string(forKey: "updated_minutes_ago", m)
-    }
-    
-    public var providersHeader: String {
-        string(forKey: "providers_header")
-    }
-    
-    public var refreshInterval: String {
-        string(forKey: "refresh_interval")
-    }
-    
-    public var languageLabel: String {
-        string(forKey: "language_label")
-    }
-    
-    public var quitApp: String {
-        string(forKey: "quit_app")
-    }
-    
-    public var noActiveProviders: String {
-        string(forKey: "no_active_providers")
-    }
-    
-    public var enableProvidersInSettings: String {
-        string(forKey: "enable_providers_in_settings")
     }
 }
