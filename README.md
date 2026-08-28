@@ -71,10 +71,18 @@ public final class CustomAIProvider: UsageProvider, @unchecked Sendable {
 }
 ```
 
-Then register it in `UsageManager.swift`:
+Then register it in [`UsageManager.swift`](Sources/AgentUsageLimits/Services/UsageManager.swift):
 ```swift
-usageManager.register(provider: CustomAIProvider())
+self.providers = [
+    AntigravityUsageProvider(),
+    ClaudeUsageProvider(),
+    CodexUsageProvider(),
+    CustomAIProvider() // <-- Add your provider here
+]
 ```
+*(Or dynamically at runtime via `usageManager.register(provider: CustomAIProvider())`)*
+
+If your provider has a custom brand logo, you can also add its vector shape in [`BrandIcons.swift`](Sources/AgentUsageLimits/Views/BrandIcons.swift).
 
 ---
 
@@ -100,27 +108,6 @@ To add a new language:
        case spanish = "es"
        case french = "fr" // <-- Add here
    }
-   ```
-
----
-
-## 🚀 Building & Running
-
-### Quick Commands
-
-1. **Build & Run**:
-   ```bash
-   make run
-   ```
-
-2. **Package `.app` Bundle**:
-   ```bash
-   make bundle
-   ```
-
-3. **Install to `/Applications`**:
-   ```bash
-   make install
    ```
 
 ---
