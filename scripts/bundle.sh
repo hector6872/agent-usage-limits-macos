@@ -50,7 +50,7 @@ cat <<EOF > "${CONTENTS_DIR}/Info.plist"
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleDisplayName</key>
-    <string>AI Usage Limits</string>
+    <string>agent-usage-limits-macos</string>
     <key>CFBundleIdentifier</key>
     <string>com.hector.agentusagelimits</string>
     <key>CFBundleVersion</key>

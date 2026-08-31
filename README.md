@@ -1,11 +1,13 @@
-# AI Usage Limits Monitor for macOS 🤖📊
+# agent-usage-limits-macos 🤖📊
 
 A native, lightweight macOS menu bar application designed to monitor your AI coding assistant usage quotas in real-time (supporting **Antigravity**, **Claude**, **Codex**, and custom providers via a modular plugin architecture).
 
-![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue.svg)
-![Swift 6](https://img.shields.io/badge/Swift-6.0-orange.svg)
-![SwiftUI](https://img.shields.io/badge/UI-SwiftUI%20%2B%20AppKit-green.svg)
-![License MIT](https://img.shields.io/badge/license-MIT-purple.svg)
+[![Latest Release](https://img.shields.io/github/v/release/hector6872/agent-usage-limits-macos?color=blue&label=Latest%20Release)](https://github.com/hector6872/agent-usage-limits-macos/releases/latest)
+[![Release Status](https://github.com/hector6872/agent-usage-limits-macos/actions/workflows/release.yml/badge.svg)](https://github.com/hector6872/agent-usage-limits-macos/actions/workflows/release.yml)
+[![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue.svg)](https://www.apple.com/macos/)
+[![Swift 6](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://www.swift.org/)
+[![SwiftUI](https://img.shields.io/badge/UI-SwiftUI%20%2B%20AppKit-green.svg)](https://developer.apple.com/xcode/swiftui/)
+[![License MIT](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
 
 ---
 
@@ -49,23 +51,44 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
 
 ---
 
-## 🚀 Getting Started
+## 📦 Installation & Download
 
-### Prerequisites
-- macOS 14.0 (Sonoma) or newer.
-- Xcode 15.0+ or Swift 6.0+ toolchain.
+### Option 1: Download Pre-built Release (Recommended)
 
-### Build & Run
+1. Download the latest `AgentUsageLimits-macOS.zip` from the [Releases](https://github.com/hector6872/agent-usage-limits-macos/releases/latest) page.
+2. Unzip and drag `AgentUsageLimits.app` to your `/Applications` folder.
 
-Clone the repository and run:
+> [!NOTE]
+> ### 🛡️ macOS Gatekeeper & Unsigned App Notice
+> As a free, independent open-source project, this app is **not code-signed with a paid Apple Developer certificate** (\$99/year). 
+>
+> When launching the pre-built binary for the first time, macOS Gatekeeper may show a warning:  
+> *"AgentUsageLimits can’t be opened because Apple cannot check it for malicious software"* or *"Unidentified Developer"*.
+>
+> **To open the app:**
+> 1. **Option A (GUI - One-time)**: **Right-click** (or `Control`-click) on `AgentUsageLimits.app` in Finder $\rightarrow$ click **Open** $\rightarrow$ click **Open** on the dialog.  
+>    *(Alternatively, go to **System Settings** $\rightarrow$ **Privacy & Security**, scroll down to the Security section, and click **Open Anyway**).*
+> 2. **Option B (Terminal)**: Strip the quarantine attribute:
+>    ```bash
+>    xattr -cr /Applications/AgentUsageLimits.app
+>    ```
+
+---
+
+### Option 2: Build from Source
+
+Since local compilation is self-signed on your machine, it avoids Gatekeeper quarantine flags altogether:
 
 ```bash
-# Clone repository
+# 1. Clone the repository
 git clone https://github.com/hector6872/agent-usage-limits-macos.git
 cd agent-usage-limits-macos
 
-# Compile and launch the app in the menu bar
+# 2. Compile and launch in the menu bar
 make run
+
+# 3. (Optional) Install directly to /Applications
+make install
 ```
 
 ### Useful Make Commands

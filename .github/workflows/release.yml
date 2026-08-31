@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release macOS App
+    runs-on: macos-14 # Apple Silicon (M1/M2/M3) runner
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make scripts executable
+        run: chmod +x ./scripts/*.sh
+
+      - name: Build and Bundle App
+        run: ./scripts/bundle.sh
+
+      - name: Create ZIP archive and Checksum
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent dist/AgentUsageLimits.app AgentUsageLimits-macOS.zip
+          shasum -a 256 AgentUsageLimits-macOS.zip > AgentUsageLimits-macOS.zip.sha256
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            AgentUsageLimits-macOS.zip
+            AgentUsageLimits-macOS.zip.sha256
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

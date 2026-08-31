@@ -1,6 +1,6 @@
-# Contributing to AI Usage Limits Monitor 🤝
+# Contributing to agent-usage-limits-macos 🤝
 
-Thank you for your interest in contributing to **AI Usage Limits Monitor for macOS**! We welcome contributions of all kinds, whether it's adding new AI quota providers, improving the UI, adding translations, fixing bugs, or improving documentation.
+Thank you for your interest in contributing to **agent-usage-limits-macos**! We welcome contributions of all kinds, whether it's adding new AI quota providers, improving the UI, adding translations, fixing bugs, or improving documentation.
 
 ---
 
