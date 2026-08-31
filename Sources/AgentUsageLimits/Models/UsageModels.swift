@@ -50,6 +50,11 @@ public struct QuotaWindow: Identifiable, Codable, Sendable {
         max(0.0, min(100.0, 100.0 - usedPercent))
     }
     
+    /// Ceiling-rounded integer remaining percentage (e.g. 72.3% -> 73%)
+    public var roundedRemainingPercent: Int {
+        Int(ceil(remainingPercent))
+    }
+    
     /// Health status derived from remaining percentage (>60% green, 25-60% yellow, <25% red)
     public var healthStatus: HealthStatus {
         HealthStatus.status(for: remainingPercent)

@@ -110,11 +110,12 @@ public final class LocalizationManager: ObservableObject {
     public func resetsCountdown(until date: Date?) -> String {
         guard let date = date else { return string("resets_soon") }
         let interval = date.timeIntervalSinceNow
+        let prefix = string("resets_prefix")
+        
         if interval <= 0 {
-            return string("resets_soon")
+            return "\(prefix) <1m"
         }
         
-        let prefix = string("resets_prefix")
         let days = Int(interval) / 86400
         let hours = (Int(interval) % 86400) / 3600
         let minutes = (Int(interval) % 3600) / 60
@@ -123,8 +124,10 @@ public final class LocalizationManager: ObservableObject {
             return "\(prefix) \(days)d"
         } else if hours > 0 {
             return "\(prefix) \(hours)h"
+        } else if minutes > 0 {
+            return "\(prefix) \(minutes)m"
         } else {
-            return "\(prefix) \(max(1, minutes))m"
+            return "\(prefix) <1m"
         }
     }
 }

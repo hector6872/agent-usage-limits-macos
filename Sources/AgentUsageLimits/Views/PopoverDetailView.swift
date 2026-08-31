@@ -259,8 +259,6 @@ struct ProviderSectionView: View {
     let usage: ProviderUsage
     @ObservedObject private var l10n = LocalizationManager.shared
     
-    private let barBlue = Color(red: 0.12, green: 0.42, blue: 0.90) // Native clean blue accent
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // Section Header: "YOUR USAGE LIMITS · PROVIDER" / "TUS LÍMITES DE USO · PROVIDER"
@@ -285,15 +283,22 @@ struct ProviderSectionView: View {
                     
                     Spacer()
                     
-                    Text("\(Int(usage.shortWindow.usedPercent))% · \(usage.shortWindow.localizedResetsFormatted)")
-                        .font(.system(size: 13.5, weight: .regular))
-                        .foregroundColor(.primary.opacity(0.85))
+                    if usage.isActive {
+                        let remaining = usage.shortWindow.roundedRemainingPercent
+                        Text("\(remaining)% · \(usage.shortWindow.localizedResetsFormatted)")
+                            .font(.system(size: 13.5, weight: .regular))
+                            .foregroundColor(.primary.opacity(0.85))
+                    } else {
+                        Text(l10n["not_active"])
+                            .font(.system(size: 13.5, weight: .regular))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
                 }
                 
-                // Thin progress bar
+                // Thin progress bar matching menu badge health color
                 MinimalProgressBar(
-                    percent: usage.shortWindow.usedPercent,
-                    fillColor: barBlue
+                    percent: usage.isActive ? usage.shortWindow.remainingPercent : 0,
+                    fillColor: usage.isActive ? usage.shortWindow.healthStatus.color : Color.gray.opacity(0.3)
                 )
             }
             
@@ -306,15 +311,22 @@ struct ProviderSectionView: View {
                     
                     Spacer()
                     
-                    Text("\(Int(usage.weeklyWindow.usedPercent))% · \(usage.weeklyWindow.localizedResetsFormatted)")
-                        .font(.system(size: 13.5, weight: .regular))
-                        .foregroundColor(.primary.opacity(0.85))
+                    if usage.isActive {
+                        let remaining = usage.weeklyWindow.roundedRemainingPercent
+                        Text("\(remaining)% · \(usage.weeklyWindow.localizedResetsFormatted)")
+                            .font(.system(size: 13.5, weight: .regular))
+                            .foregroundColor(.primary.opacity(0.85))
+                    } else {
+                        Text(l10n["not_active"])
+                            .font(.system(size: 13.5, weight: .regular))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
                 }
                 
-                // Thin progress bar
+                // Thin progress bar matching menu badge health color
                 MinimalProgressBar(
-                    percent: usage.weeklyWindow.usedPercent,
-                    fillColor: barBlue
+                    percent: usage.isActive ? usage.weeklyWindow.remainingPercent : 0,
+                    fillColor: usage.isActive ? usage.weeklyWindow.healthStatus.color : Color.gray.opacity(0.3)
                 )
             }
         }

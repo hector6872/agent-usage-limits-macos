@@ -9,7 +9,8 @@
 
 /* Reset countdowns */
 "resets_soon" = "resets soon";
-"resets_prefix" = "resets";
+"resets_prefix" = "resets in";
+"not_active" = "Not active";
 
 /* Action buttons & Timestamps */
 "refresh" = "Refresh";

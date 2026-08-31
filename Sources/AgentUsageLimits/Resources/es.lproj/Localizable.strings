@@ -10,6 +10,7 @@
 /* Reset countdowns */
 "resets_soon" = "reinicia pronto";
 "resets_prefix" = "reinicia en";
+"not_active" = "No activo";
 
 /* Action buttons & Timestamps */
 "refresh" = "Actualizar";

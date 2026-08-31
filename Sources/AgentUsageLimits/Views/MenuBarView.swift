@@ -76,14 +76,14 @@ struct ProviderMenuBarItem: View {
                 // 3. Percentages Column (Trailing-aligned numbers; turns red if 0%, --% if inactive)
                 VStack(alignment: .trailing, spacing: 1) {
                     if usage.isActive {
-                        let shortRemaining = Int(usage.shortWindow.remainingPercent)
+                        let shortRemaining = usage.shortWindow.roundedRemainingPercent
                         Text("\(shortRemaining)%")
                             .font(.system(size: 9.5, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
                             .frame(height: 9.5, alignment: .trailing)
                         
-                        let weeklyRemaining = Int(usage.weeklyWindow.remainingPercent)
+                        let weeklyRemaining = usage.weeklyWindow.roundedRemainingPercent
                         Text("\(weeklyRemaining)%")
                             .font(.system(size: 9.5, weight: .semibold, design: .rounded))
                             .monospacedDigit()
@@ -118,7 +118,7 @@ struct ProviderMenuBarItem: View {
                     .frame(width: 5, height: 5)
                 
                 if usage.isActive {
-                    let shortRemaining = Int(usage.shortWindow.remainingPercent)
+                    let shortRemaining = usage.shortWindow.roundedRemainingPercent
                     Text("\(shortRemaining)%")
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .monospacedDigit()
