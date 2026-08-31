@@ -60,34 +60,34 @@ struct ProviderMenuBarItem: View {
                     color: usage.isActive ? primaryColor : inactiveColor
                 )
                 
-                // 2. Indicators Column (Centered Dot & Centered W)
+                // 2. Indicators Column (Centered W & Centered Dot)
                 VStack(alignment: .center, spacing: 1) {
-                    Circle()
-                        .fill(usage.isActive ? usage.shortWindow.healthStatus.color : Color.gray.opacity(0.45))
-                        .frame(width: 4.5, height: 4.5)
-                        .frame(width: 8, height: 9.5, alignment: .center)
-                    
                     Text("W")
                         .font(.system(size: 7.5, weight: .bold, design: .rounded))
                         .foregroundColor(usage.isActive ? usage.weeklyWindow.healthStatus.color : Color.gray.opacity(0.45))
+                        .frame(width: 8, height: 9.5, alignment: .center)
+                    
+                    Circle()
+                        .fill(usage.isActive ? usage.shortWindow.healthStatus.color : Color.gray.opacity(0.45))
+                        .frame(width: 4.5, height: 4.5)
                         .frame(width: 8, height: 9.5, alignment: .center)
                 }
                 
                 // 3. Percentages Column (Trailing-aligned numbers; turns red if 0%, --% if inactive)
                 VStack(alignment: .trailing, spacing: 1) {
                     if usage.isActive {
-                        let shortRemaining = usage.shortWindow.roundedRemainingPercent
-                        Text("\(shortRemaining)%")
-                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
-                            .frame(height: 9.5, alignment: .trailing)
-                        
                         let weeklyRemaining = usage.weeklyWindow.roundedRemainingPercent
                         Text("\(weeklyRemaining)%")
                             .font(.system(size: 9.5, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundColor(weeklyRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                            .frame(height: 9.5, alignment: .trailing)
+                        
+                        let shortRemaining = usage.shortWindow.roundedRemainingPercent
+                        Text("\(shortRemaining)%")
+                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
                             .frame(height: 9.5, alignment: .trailing)
                     } else {
                         Text("--%")

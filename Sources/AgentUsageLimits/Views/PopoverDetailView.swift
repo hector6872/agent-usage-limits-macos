@@ -296,34 +296,6 @@ struct ProviderSectionView: View {
                     .opacity(0.6)
             }
             
-            // 5-Hour / Short limit row
-            VStack(alignment: .leading, spacing: 5) {
-                HStack {
-                    Text(usage.shortWindow.localizedTitle)
-                        .font(.system(size: 13.5, weight: .regular))
-                        .foregroundColor(.primary)
-                    
-                    Spacer()
-                    
-                    if usage.isActive {
-                        let remaining = usage.shortWindow.roundedRemainingPercent
-                        Text("\(remaining)% · \(usage.shortWindow.localizedResetsFormatted)")
-                            .font(.system(size: 13.5, weight: .regular))
-                            .foregroundColor(.primary.opacity(0.85))
-                    } else {
-                        Text(l10n["not_active"])
-                            .font(.system(size: 13.5, weight: .regular))
-                            .foregroundColor(.secondary.opacity(0.6))
-                    }
-                }
-                
-                // Thin progress bar matching menu badge health color
-                MinimalProgressBar(
-                    percent: usage.isActive ? usage.shortWindow.remainingPercent : 0,
-                    fillColor: usage.isActive ? usage.shortWindow.healthStatus.color : Color.gray.opacity(0.3)
-                )
-            }
-            
             // Weekly limit row
             VStack(alignment: .leading, spacing: 5) {
                 HStack {
@@ -349,6 +321,34 @@ struct ProviderSectionView: View {
                 MinimalProgressBar(
                     percent: usage.isActive ? usage.weeklyWindow.remainingPercent : 0,
                     fillColor: usage.isActive ? usage.weeklyWindow.healthStatus.color : Color.gray.opacity(0.3)
+                )
+            }
+            
+            // 5-Hour / Short limit row
+            VStack(alignment: .leading, spacing: 5) {
+                HStack {
+                    Text(usage.shortWindow.localizedTitle)
+                        .font(.system(size: 13.5, weight: .regular))
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    if usage.isActive {
+                        let remaining = usage.shortWindow.roundedRemainingPercent
+                        Text("\(remaining)% · \(usage.shortWindow.localizedResetsFormatted)")
+                            .font(.system(size: 13.5, weight: .regular))
+                            .foregroundColor(.primary.opacity(0.85))
+                    } else {
+                        Text(l10n["not_active"])
+                            .font(.system(size: 13.5, weight: .regular))
+                            .foregroundColor(.secondary.opacity(0.6))
+                    }
+                }
+                
+                // Thin progress bar matching menu badge health color
+                MinimalProgressBar(
+                    percent: usage.isActive ? usage.shortWindow.remainingPercent : 0,
+                    fillColor: usage.isActive ? usage.shortWindow.healthStatus.color : Color.gray.opacity(0.3)
                 )
             }
         }
