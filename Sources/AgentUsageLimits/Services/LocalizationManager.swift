@@ -7,6 +7,13 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     case system = "system"
     case english = "en"
     case spanish = "es"
+    case french = "fr"
+    case german = "de"
+    case italian = "it"
+    case portuguese = "pt"
+    case japanese = "ja"
+    case chinese = "zh-Hans"
+    case korean = "ko"
     
     public var id: String { rawValue }
     
@@ -19,6 +26,20 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
             return "English"
         case .spanish:
             return "Español"
+        case .french:
+            return "Français"
+        case .german:
+            return "Deutsch"
+        case .italian:
+            return "Italiano"
+        case .portuguese:
+            return "Português"
+        case .japanese:
+            return "日本語"
+        case .chinese:
+            return "简体中文"
+        case .korean:
+            return "한국어"
         }
     }
 }
@@ -52,18 +73,37 @@ public final class LocalizationManager: ObservableObject {
         updateActiveBundle()
     }
     
-    /// Resolved language code ("en" or "es")
+    /// Resolved language code
     public var resolvedCode: String {
         switch currentLanguage {
         case .english:
             return "en"
         case .spanish:
             return "es"
+        case .french:
+            return "fr"
+        case .german:
+            return "de"
+        case .italian:
+            return "it"
+        case .portuguese:
+            return "pt"
+        case .japanese:
+            return "ja"
+        case .chinese:
+            return "zh-Hans"
+        case .korean:
+            return "ko"
         case .system:
             let preferred = Locale.preferredLanguages.first?.lowercased() ?? "en"
-            if preferred.starts(with: "es") {
-                return "es"
-            }
+            if preferred.starts(with: "es") { return "es" }
+            if preferred.starts(with: "fr") { return "fr" }
+            if preferred.starts(with: "de") { return "de" }
+            if preferred.starts(with: "it") { return "it" }
+            if preferred.starts(with: "pt") { return "pt" }
+            if preferred.starts(with: "ja") { return "ja" }
+            if preferred.starts(with: "zh") { return "zh-Hans" }
+            if preferred.starts(with: "ko") { return "ko" }
             return "en"
         }
     }

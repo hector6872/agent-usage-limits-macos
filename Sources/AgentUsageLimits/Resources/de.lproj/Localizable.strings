@@ -1,0 +1,38 @@
+/* German Translations */
+
+/* Header & Section */
+"usage_limits_header" = "%@";
+
+/* Quota Windows */
+"short_limit_title" = "%@-Stunden-Limit";
+"weekly_limit_title" = "Wöchentlich";
+
+/* Reset countdowns */
+"resets_soon" = "setzt bald zurück";
+"resets_prefix" = "setzt zurück in";
+"not_active" = "Nicht aktiv";
+
+/* Action buttons & Timestamps */
+"refresh" = "Aktualisieren";
+"updated_just_now" = "Gerade aktualisiert";
+"auto_refresh_1m_hint" = "Automatische Aktualisierung jede Minute (manuell deaktiviert)";
+"cooldown_hint" = "Warten Sie %ds vor erneuter Aktualisierung";
+"refresh_now_hint" = "Jetzt aktualisieren";
+
+/* Settings Drawer */
+"providers_header" = "ANBIETER";
+"language_label" = "Sprache";
+"language_system" = "System";
+"refresh_interval" = "Aktualisierungsintervall";
+"launch_at_login" = "Beim Anmelden starten";
+"notify_critical_level" = "Warnung bei kritischem Limit";
+"help" = "Hilfe";
+"quit_app" = "App beenden";
+
+/* Notifications */
+"critical_notification_title" = "%@ - Kritisches Kontingent";
+"critical_notification_body" = "%@: nur noch %@%% verbleibend (%@)";
+
+/* Empty States */
+"no_active_providers" = "Keine aktiven Anbieter";
+"enable_providers_in_settings" = "Anbieter in Einstellungen aktivieren";

@@ -1,0 +1,38 @@
+/* Japanese Translations */
+
+/* Header & Section */
+"usage_limits_header" = "%@";
+
+/* Quota Windows */
+"short_limit_title" = "%@時間制限";
+"weekly_limit_title" = "週間";
+
+/* Reset countdowns */
+"resets_soon" = "まもなくリセット";
+"resets_prefix" = "リセットまで";
+"not_active" = "停止中";
+
+/* Action buttons & Timestamps */
+"refresh" = "更新";
+"updated_just_now" = "たった今更新";
+"auto_refresh_1m_hint" = "1分ごとの自動更新中 (手動無効)";
+"cooldown_hint" = "再更新まであと %d秒";
+"refresh_now_hint" = "今すぐ更新";
+
+/* Settings Drawer */
+"providers_header" = "プロバイダー";
+"language_label" = "言語";
+"language_system" = "システム";
+"refresh_interval" = "更新間隔";
+"launch_at_login" = "ログイン時に起動";
+"notify_critical_level" = "制限警告通知";
+"help" = "ヘルプ";
+"quit_app" = "アプリを終了";
+
+/* Notifications */
+"critical_notification_title" = "%@ - 残量低下";
+"critical_notification_body" = "%@: 残り %@%% (%@)";
+
+/* Empty States */
+"no_active_providers" = "有効なプロバイダーがありません";
+"enable_providers_in_settings" = "設定でプロバイダーを有効化";

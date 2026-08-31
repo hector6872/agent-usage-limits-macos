@@ -1,0 +1,38 @@
+/* Simplified Chinese Translations */
+
+/* Header & Section */
+"usage_limits_header" = "%@";
+
+/* Quota Windows */
+"short_limit_title" = "%@小时限制";
+"weekly_limit_title" = "每周";
+
+/* Reset countdowns */
+"resets_soon" = "即将重置";
+"resets_prefix" = "将在重置：";
+"not_active" = "未激活";
+
+/* Action buttons & Timestamps */
+"refresh" = "刷新";
+"updated_just_now" = "刚刚更新";
+"auto_refresh_1m_hint" = "每分钟自动刷新 (已禁用手动刷新)";
+"cooldown_hint" = "请等待 %d秒 后再刷新";
+"refresh_now_hint" = "立即刷新";
+
+/* Settings Drawer */
+"providers_header" = "服务商";
+"language_label" = "语言";
+"language_system" = "跟随系统";
+"refresh_interval" = "刷新间隔";
+"launch_at_login" = "开机自启动";
+"notify_critical_level" = "额度不足提醒";
+"help" = "帮助";
+"quit_app" = "退出应用";
+
+/* Notifications */
+"critical_notification_title" = "%@ - 额度严重不足";
+"critical_notification_body" = "%@: 仅剩 %@%% (%@)";
+
+/* Empty States */
+"no_active_providers" = "无活跃服务商";
+"enable_providers_in_settings" = "在设置中启用服务商";

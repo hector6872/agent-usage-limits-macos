@@ -1,0 +1,38 @@
+/* Korean Translations */
+
+/* Header & Section */
+"usage_limits_header" = "%@";
+
+/* Quota Windows */
+"short_limit_title" = "%@시간 제한";
+"weekly_limit_title" = "주간";
+
+/* Reset countdowns */
+"resets_soon" = "곧 초기화됨";
+"resets_prefix" = "초기화까지";
+"not_active" = "비활성";
+
+/* Action buttons & Timestamps */
+"refresh" = "새로고침";
+"updated_just_now" = "방금 업데이트됨";
+"auto_refresh_1m_hint" = "1분마다 자동 새로고침 (수동 비활성화됨)";
+"cooldown_hint" = "다시 새로고침하려면 %d초 대기";
+"refresh_now_hint" = "지금 새로고침";
+
+/* Settings Drawer */
+"providers_header" = "제공자";
+"language_label" = "언어";
+"language_system" = "시스템 기본값";
+"refresh_interval" = "새로고침 주기";
+"launch_at_login" = "로그인 시 시작";
+"notify_critical_level" = "임계 제한 알림";
+"help" = "도움말";
+"quit_app" = "앱 종료";
+
+/* Notifications */
+"critical_notification_title" = "%@ - 사용량 임계치 경고";
+"critical_notification_body" = "%@: %@%% 남음 (%@)";
+
+/* Empty States */
+"no_active_providers" = "활성 제공자 없음";
+"enable_providers_in_settings" = "설정에서 제공자 활성화";
