@@ -2,7 +2,7 @@
 
 A native, lightweight macOS menu bar application designed to monitor your AI coding assistant usage quotas in real-time (supporting **Antigravity**, **Claude**, **Codex**, and custom providers via a modular plugin architecture).
 
-[![Latest Release](https://img.shields.io/github/v/release/hector6872/agent-usage-limits-macos?color=blue&label=Latest%20Release)](https://github.com/hector6872/agent-usage-limits-macos/releases/latest)
+[![Release](https://img.shields.io/github/v/tag/hector6872/agent-usage-limits-macos?color=blue&label=Release)](https://github.com/hector6872/agent-usage-limits-macos/releases)
 [![Release Status](https://github.com/hector6872/agent-usage-limits-macos/actions/workflows/release.yml/badge.svg)](https://github.com/hector6872/agent-usage-limits-macos/actions/workflows/release.yml)
 [![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue.svg)](https://www.apple.com/macos/)
 [![Swift 6](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://www.swift.org/)
