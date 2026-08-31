@@ -1,0 +1,38 @@
+/* English Translations */
+
+/* Header & Section */
+"usage_limits_header" = "%@";
+
+/* Quota Windows */
+"short_limit_title" = "%@-hour limit";
+"weekly_limit_title" = "Weekly";
+
+/* Reset countdowns */
+"resets_soon" = "resets soon";
+"resets_prefix" = "resets in";
+"not_active" = "Not active";
+
+/* Action buttons & Timestamps */
+"refresh" = "Refresh";
+"updated_just_now" = "Updated just now";
+"auto_refresh_1m_hint" = "Auto-refreshing every 1 min (manual disabled)";
+"cooldown_hint" = "Wait %ds to refresh again";
+"refresh_now_hint" = "Refresh now";
+
+/* Settings Drawer */
+"providers_header" = "PROVIDERS";
+"language_label" = "Language";
+"language_system" = "System";
+"refresh_interval" = "Refresh interval";
+"launch_at_login" = "Launch at login";
+"notify_critical_level" = "Critical limit alerts";
+"help" = "Help";
+"quit_app" = "Quit Application";
+
+/* Notifications */
+"critical_notification_title" = "%@ - Critical Quota";
+"critical_notification_body" = "%@: only %@%% remaining (%@)";
+
+/* Empty States */
+"no_active_providers" = "No active providers";
+"enable_providers_in_settings" = "Enable Providers in Settings";

@@ -1,0 +1,38 @@
+/* Spanish Translations */
+
+/* Header & Section */
+"usage_limits_header" = "%@";
+
+/* Quota Windows */
+"short_limit_title" = "Límite de %@ horas";
+"weekly_limit_title" = "Semanal";
+
+/* Reset countdowns */
+"resets_soon" = "reinicia pronto";
+"resets_prefix" = "reinicia en";
+"not_active" = "No activo";
+
+/* Action buttons & Timestamps */
+"refresh" = "Actualizar";
+"updated_just_now" = "Actualizado ahora";
+"auto_refresh_1m_hint" = "Actualización automática cada 1 min (manual desactivado)";
+"cooldown_hint" = "Espera %ds para volver a actualizar";
+"refresh_now_hint" = "Actualizar ahora";
+
+/* Settings Drawer */
+"providers_header" = "PROVEEDORES";
+"language_label" = "Idioma";
+"language_system" = "Sistema";
+"refresh_interval" = "Frecuencia de refresco";
+"launch_at_login" = "Iniciar al arrancar";
+"notify_critical_level" = "Avisar con límite crítico";
+"help" = "Ayuda";
+"quit_app" = "Cerrar aplicación";
+
+/* Notifications */
+"critical_notification_title" = "%@ - Cuota crítica";
+"critical_notification_body" = "%@: solo queda el %@%% (%@)";
+
+/* Empty States */
+"no_active_providers" = "Sin proveedores activos";
+"enable_providers_in_settings" = "Activar proveedores en ajustes";
