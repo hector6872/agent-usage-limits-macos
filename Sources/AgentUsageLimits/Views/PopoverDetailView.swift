@@ -147,13 +147,23 @@ public struct PopoverDetailView: View {
             }
             .padding(.top, 2)
             
+            Button(l10n["help"]) {
+                if let url = URL(string: "https://github.com/hector6872/agent-usage-limits-macos") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            .buttonStyle(.plain)
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+            .padding(.top, 4)
+            
             Button(l10n["quit_app"]) {
                 NSApplication.shared.terminate(nil)
             }
             .buttonStyle(.plain)
             .font(.system(size: 11))
             .foregroundColor(.red.opacity(0.85))
-            .padding(.top, 4)
+            .padding(.top, 2)
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.04)))

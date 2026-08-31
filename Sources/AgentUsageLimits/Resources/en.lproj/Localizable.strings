@@ -25,6 +25,7 @@
 "language_system" = "System";
 "refresh_interval" = "Refresh interval";
 "launch_at_login" = "Launch at login";
+"help" = "Help";
 "quit_app" = "Quit Application";
 
 /* Empty States */

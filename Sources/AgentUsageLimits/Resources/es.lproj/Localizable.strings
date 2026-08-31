@@ -25,6 +25,7 @@
 "language_system" = "Sistema";
 "refresh_interval" = "Frecuencia de refresco";
 "launch_at_login" = "Iniciar al arrancar";
+"help" = "Ayuda";
 "quit_app" = "Cerrar aplicación";
 
 /* Empty States */
