@@ -25,8 +25,13 @@
 "language_system" = "Sistema";
 "refresh_interval" = "Frecuencia de refresco";
 "launch_at_login" = "Iniciar al arrancar";
+"notify_critical_level" = "Avisar con límite crítico";
 "help" = "Ayuda";
 "quit_app" = "Cerrar aplicación";
+
+/* Notifications */
+"critical_notification_title" = "%@ - Cuota crítica";
+"critical_notification_body" = "%@: solo queda el %@%% (%@)";
 
 /* Empty States */
 "no_active_providers" = "Sin proveedores activos";

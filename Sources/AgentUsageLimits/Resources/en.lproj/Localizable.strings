@@ -25,8 +25,13 @@
 "language_system" = "System";
 "refresh_interval" = "Refresh interval";
 "launch_at_login" = "Launch at login";
+"notify_critical_level" = "Critical limit alerts";
 "help" = "Help";
 "quit_app" = "Quit Application";
+
+/* Notifications */
+"critical_notification_title" = "%@ - Critical Quota";
+"critical_notification_body" = "%@: only %@%% remaining (%@)";
 
 /* Empty States */
 "no_active_providers" = "No active providers";

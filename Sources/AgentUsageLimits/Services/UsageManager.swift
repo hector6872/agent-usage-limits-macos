@@ -18,6 +18,17 @@ public final class UsageManager: ObservableObject {
         }
     }
     
+    /// Whether notifications for critical quota levels (< 25%) are enabled
+    @Published public var notifyOnCriticalLevel: Bool = false {
+        didSet {
+            UserDefaults.standard.set(notifyOnCriticalLevel, forKey: "notify_on_critical_level")
+            if notifyOnCriticalLevel {
+                NotificationService.shared.requestAuthorization()
+                NotificationService.shared.checkAndNotifyCriticalQuotas(usages: self.usages)
+            }
+        }
+    }
+    
     /// Registered providers
     public private(set) var providers: [any UsageProvider] = []
     
@@ -28,6 +39,11 @@ public final class UsageManager: ObservableObject {
         let savedInterval = UserDefaults.standard.double(forKey: "refresh_interval_seconds")
         if savedInterval > 0 {
             self.refreshIntervalSeconds = savedInterval
+        }
+        
+        // Load saved notification preference
+        if UserDefaults.standard.object(forKey: "notify_on_critical_level") != nil {
+            self.notifyOnCriticalLevel = UserDefaults.standard.bool(forKey: "notify_on_critical_level")
         }
         
         if providers.isEmpty {
@@ -173,6 +189,10 @@ public final class UsageManager: ObservableObject {
                 }
             }
         }
+        
+        if notifyOnCriticalLevel {
+            NotificationService.shared.checkAndNotifyCriticalQuotas(usages: self.usages)
+        }
     }
     
     private func refreshProvider(_ provider: any UsageProvider) async {
@@ -189,6 +209,10 @@ public final class UsageManager: ObservableObject {
                 weeklyWindow: QuotaWindow(name: "Weekly", usedPercent: 0),
                 errorMessage: error.localizedDescription
             )
+        }
+        
+        if notifyOnCriticalLevel {
+            NotificationService.shared.checkAndNotifyCriticalQuotas(usages: self.usages)
         }
     }
     

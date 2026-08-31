@@ -147,6 +147,18 @@ public struct PopoverDetailView: View {
             }
             .padding(.top, 2)
             
+            // Critical quota notifications toggle
+            HStack {
+                Text(l10n["notify_critical_level"])
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Spacer()
+                Toggle("", isOn: $usageManager.notifyOnCriticalLevel)
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+            }
+            .padding(.top, 2)
+            
             Button(l10n["help"]) {
                 if let url = URL(string: "https://github.com/hector6872/agent-usage-limits-macos") {
                     NSWorkspace.shared.open(url)
