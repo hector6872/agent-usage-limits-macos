@@ -17,6 +17,9 @@ public protocol UsageProvider: Sendable {
     /// Whether this provider is enabled to fetch and display in menu bar
     var isEnabled: Bool { get set }
     
+    /// Checks whether the provider (App UI or CLI) is currently active / running on the system
+    var isActive: Bool { get }
+    
     /// Fetches the latest quota usage information asynchronously
     func fetchUsage() async throws -> ProviderUsage
 }

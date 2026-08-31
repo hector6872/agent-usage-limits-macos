@@ -36,7 +36,7 @@ public struct MenuBarView: View {
     }
 }
 
-/// Individual provider item in the menu bar with strict tabular alignment and 0% red highlight
+/// Individual provider item in the menu bar with strict tabular alignment, inactive state, and 0% red highlight
 struct ProviderMenuBarItem: View {
     let usage: ProviderUsage
     let isDarkMode: Bool
@@ -45,57 +45,90 @@ struct ProviderMenuBarItem: View {
         isDarkMode ? .white : .black
     }
     
+    private var inactiveColor: Color {
+        primaryColor.opacity(0.38)
+    }
+    
     var body: some View {
         if usage.showWeeklyInMenuBar {
             // Dual-line layout: Icon + [Dot / W column] + [Right-aligned % column]
             HStack(alignment: .center, spacing: 3.5) {
                 // 1. Vertically centered Brand Icon
-                BrandIconView(symbol: usage.iconSymbol, size: 12.5, color: primaryColor)
+                BrandIconView(
+                    symbol: usage.iconSymbol,
+                    size: 12.5,
+                    color: usage.isActive ? primaryColor : inactiveColor
+                )
                 
                 // 2. Indicators Column (Centered Dot & Centered W)
                 VStack(alignment: .center, spacing: 1) {
                     Circle()
-                        .fill(usage.shortWindow.healthStatus.color)
+                        .fill(usage.isActive ? usage.shortWindow.healthStatus.color : Color.gray.opacity(0.45))
                         .frame(width: 4.5, height: 4.5)
                         .frame(width: 8, height: 9.5, alignment: .center)
                     
                     Text("W")
                         .font(.system(size: 7.5, weight: .bold, design: .rounded))
-                        .foregroundColor(usage.weeklyWindow.healthStatus.color)
+                        .foregroundColor(usage.isActive ? usage.weeklyWindow.healthStatus.color : Color.gray.opacity(0.45))
                         .frame(width: 8, height: 9.5, alignment: .center)
                 }
                 
-                // 3. Percentages Column (Trailing-aligned numbers; turns red if 0%)
+                // 3. Percentages Column (Trailing-aligned numbers; turns red if 0%, --% if inactive)
                 VStack(alignment: .trailing, spacing: 1) {
-                    let shortRemaining = Int(usage.shortWindow.remainingPercent)
-                    Text("\(shortRemaining)%")
-                        .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
-                        .frame(height: 9.5, alignment: .trailing)
-                    
-                    let weeklyRemaining = Int(usage.weeklyWindow.remainingPercent)
-                    Text("\(weeklyRemaining)%")
-                        .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundColor(weeklyRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
-                        .frame(height: 9.5, alignment: .trailing)
+                    if usage.isActive {
+                        let shortRemaining = Int(usage.shortWindow.remainingPercent)
+                        Text("\(shortRemaining)%")
+                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                            .frame(height: 9.5, alignment: .trailing)
+                        
+                        let weeklyRemaining = Int(usage.weeklyWindow.remainingPercent)
+                        Text("\(weeklyRemaining)%")
+                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(weeklyRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                            .frame(height: 9.5, alignment: .trailing)
+                    } else {
+                        Text("--%")
+                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(inactiveColor)
+                            .frame(height: 9.5, alignment: .trailing)
+                        
+                        Text("--%")
+                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(inactiveColor)
+                            .frame(height: 9.5, alignment: .trailing)
+                    }
                 }
             }
         } else {
             // Single-line hero layout (like Antigravity in reference image: Icon + Dot + 46%)
             HStack(spacing: 4) {
-                BrandIconView(symbol: usage.iconSymbol, size: 13, color: primaryColor)
+                BrandIconView(
+                    symbol: usage.iconSymbol,
+                    size: 13,
+                    color: usage.isActive ? primaryColor : inactiveColor
+                )
                 
                 Circle()
-                    .fill(usage.shortWindow.healthStatus.color)
+                    .fill(usage.isActive ? usage.shortWindow.healthStatus.color : Color.gray.opacity(0.45))
                     .frame(width: 5, height: 5)
                 
-                let shortRemaining = Int(usage.shortWindow.remainingPercent)
-                Text("\(shortRemaining)%")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                if usage.isActive {
+                    let shortRemaining = Int(usage.shortWindow.remainingPercent)
+                    Text("\(shortRemaining)%")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                } else {
+                    Text("--%")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(inactiveColor)
+                }
             }
         }
     }

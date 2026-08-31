@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import AppKit
 import Combine
 
 /// Central manager that coordinates all quota providers, manages periodic polling, and persists preferences.
@@ -45,6 +46,27 @@ public final class UsageManager: ObservableObject {
             let key = "provider_\(self.providers[i].id)_enabled"
             if UserDefaults.standard.object(forKey: key) != nil {
                 self.providers[i].isEnabled = UserDefaults.standard.bool(forKey: key)
+            }
+        }
+        
+        // Observe app open/close events to immediately update active states
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didLaunchApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.refreshAll()
+            }
+        }
+        
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didTerminateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                await self?.refreshAll()
             }
         }
         
@@ -135,6 +157,7 @@ public final class UsageManager: ObservableObject {
                             providerId: provider.id,
                             displayName: provider.displayName,
                             iconSymbol: provider.iconSymbol,
+                            isActive: false,
                             shortWindow: QuotaWindow(name: "5-hour limit", usedPercent: 0),
                             weeklyWindow: QuotaWindow(name: "Weekly", usedPercent: 0),
                             errorMessage: error.localizedDescription
@@ -161,6 +184,7 @@ public final class UsageManager: ObservableObject {
                 providerId: provider.id,
                 displayName: provider.displayName,
                 iconSymbol: provider.iconSymbol,
+                isActive: false,
                 shortWindow: QuotaWindow(name: "5-hour limit", usedPercent: 0),
                 weeklyWindow: QuotaWindow(name: "Weekly", usedPercent: 0),
                 errorMessage: error.localizedDescription

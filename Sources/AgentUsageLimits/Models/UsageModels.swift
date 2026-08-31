@@ -108,6 +108,9 @@ public struct ProviderUsage: Identifiable, Sendable {
     public let displayName: String
     public let iconSymbol: String
     
+    /// Whether the provider (App UI or CLI) is currently active / running
+    public let isActive: Bool
+    
     /// Short-term sliding/session window (default 5h or configured by provider)
     public let shortWindow: QuotaWindow
     
@@ -124,6 +127,7 @@ public struct ProviderUsage: Identifiable, Sendable {
         providerId: String,
         displayName: String,
         iconSymbol: String,
+        isActive: Bool = true,
         shortWindow: QuotaWindow,
         weeklyWindow: QuotaWindow,
         showWeeklyInMenuBar: Bool = true,
@@ -133,6 +137,7 @@ public struct ProviderUsage: Identifiable, Sendable {
         self.providerId = providerId
         self.displayName = displayName
         self.iconSymbol = iconSymbol
+        self.isActive = isActive
         self.shortWindow = shortWindow
         self.weeklyWindow = weeklyWindow
         self.showWeeklyInMenuBar = showWeeklyInMenuBar
@@ -142,7 +147,7 @@ public struct ProviderUsage: Identifiable, Sendable {
 
     /// Overall health status derived from remaining quota on the short window
     public var healthStatus: HealthStatus {
-        if errorMessage != nil { return .unknown }
+        if !isActive || errorMessage != nil { return .unknown }
         return shortWindow.healthStatus
     }
 }
