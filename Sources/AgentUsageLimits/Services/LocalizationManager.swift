@@ -18,10 +18,11 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     public var id: String { rawValue }
     
     @MainActor
-    public func localizedName(with l10n: LocalizationManager = .shared) -> String {
+    public func localizedName(with l10n: LocalizationManager? = nil) -> String {
+        let manager = l10n ?? LocalizationManager.shared
         switch self {
         case .system:
-            return l10n["language_system"]
+            return manager["language_system"]
         case .english:
             return "English"
         case .spanish:
