@@ -38,9 +38,9 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
     
     // MARK: - Activity Detection (GUI + CLI)
     
-    /// Checks whether Claude is currently active (App UI or CLI processes running, or credentials available)
+    /// Checks whether Claude is currently active (App UI or CLI processes running)
     public var isActive: Bool {
-        return isGUIRunning || isCLIRunning || isTokenAvailable
+        return isGUIRunning || isCLIRunning
     }
     
     public var isTokenAvailable: Bool {
