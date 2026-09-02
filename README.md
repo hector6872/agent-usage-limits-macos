@@ -9,6 +9,13 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI%20%2B%20AppKit-green.svg)](https://developer.apple.com/xcode/swiftui/)
 [![License MIT](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
 
+<p align="center">
+  <img src="assets/menubar-preview.png" alt="Menu Bar Quota Overview" width="400" />
+</p>
+<p align="center">
+  <img src="assets/popover-preview.png" alt="Detailed Quota & Settings Popover" width="320" />
+</p>
+
 ---
 
 ## 🌟 Features
