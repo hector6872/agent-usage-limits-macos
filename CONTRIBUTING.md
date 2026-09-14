@@ -160,6 +160,7 @@ Sources/AgentUsageLimits/Resources/
 ├── ja.lproj/Localizable.strings
 ├── zh-Hans.lproj/Localizable.strings
 ├── ko.lproj/Localizable.strings
+├── ru.lproj/Localizable.strings
 └── <lang>.lproj/Localizable.strings
 ```
 

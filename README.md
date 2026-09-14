@@ -49,7 +49,7 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
   - Native **Launch at Login** support via `SMAppService`.
   - Direct repository help link and application termination.
 - **Multi-Language Support (i18n)**:
-  - 🌐 Automatic system language detection + in-app language picker supporting **9 languages**:
+  - 🌐 Automatic system language detection + in-app language picker supporting **10 languages**:
     - 🇺🇸 **English** (`en`)
     - 🇪🇸 **Español** (`es`)
     - 🇫🇷 **Français** (`fr`)
@@ -59,6 +59,7 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
     - 🇯🇵 **日本語** (`ja`)
     - 🇨🇳 **简体中文** (`zh-Hans`)
     - 🇰🇷 **한국어** (`ko`)
+    - 🇷🇺 **Русский** (`ru`)
 - **Zero External Dependencies**:
   - Pure Swift 6 built on SwiftUI, AppKit, and Foundation.
 
@@ -226,7 +227,8 @@ Sources/AgentUsageLimits/Resources/
 ├── pt.lproj/Localizable.strings      # Portuguese
 ├── ja.lproj/Localizable.strings      # Japanese
 ├── zh-Hans.lproj/Localizable.strings # Simplified Chinese
-└── ko.lproj/Localizable.strings      # Korean
+├── ko.lproj/Localizable.strings      # Korean
+└── ru.lproj/Localizable.strings      # Russian
 ```
 
 ---

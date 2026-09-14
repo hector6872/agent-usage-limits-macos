@@ -1,0 +1,38 @@
+/* Russian Translations */
+
+/* Header & Section */
+"usage_limits_header" = "%@";
+
+/* Quota Windows */
+"short_limit_title" = "Лимит на %@ ч";
+"weekly_limit_title" = "За неделю";
+
+/* Reset countdowns */
+"resets_soon" = "скоро обновится";
+"resets_prefix" = "сброс через";
+"not_active" = "Неактивно";
+
+/* Action buttons & Timestamps */
+"refresh" = "Обновить";
+"updated_just_now" = "Обновлено только что";
+"auto_refresh_1m_hint" = "Автообновление каждую 1 мин (ручное отключено)";
+"cooldown_hint" = "Подождите %d с для повторного обновления";
+"refresh_now_hint" = "Обновить сейчас";
+
+/* Settings Drawer */
+"providers_header" = "ПРОВАЙДЕРЫ";
+"language_label" = "Язык";
+"language_system" = "Системный";
+"refresh_interval" = "Интервал обновления";
+"launch_at_login" = "Запуск при входе";
+"notify_critical_level" = "Оповещения о критическом лимите";
+"help" = "Справка";
+"quit_app" = "Завершить приложение";
+
+/* Notifications */
+"critical_notification_title" = "%@ — Критический лимит";
+"critical_notification_body" = "%@: осталось только %@%% (%@)";
+
+/* Empty States */
+"no_active_providers" = "Нет активных провайдеров";
+"enable_providers_in_settings" = "Включите провайдеров в настройках";
