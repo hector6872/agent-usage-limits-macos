@@ -14,6 +14,7 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     case japanese = "ja"
     case chinese = "zh-Hans"
     case korean = "ko"
+    case russian = "ru"
     
     public var id: String { rawValue }
     
@@ -41,6 +42,8 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
             return "简体中文"
         case .korean:
             return "한국어"
+        case .russian:
+            return "Русский"
         }
     }
 }
@@ -95,6 +98,8 @@ public final class LocalizationManager: ObservableObject {
             return "zh-Hans"
         case .korean:
             return "ko"
+        case .russian:
+            return "ru"
         case .system:
             let preferred = Locale.preferredLanguages.first?.lowercased() ?? "en"
             if preferred.starts(with: "es") { return "es" }
@@ -105,6 +110,7 @@ public final class LocalizationManager: ObservableObject {
             if preferred.starts(with: "ja") { return "ja" }
             if preferred.starts(with: "zh") { return "zh-Hans" }
             if preferred.starts(with: "ko") { return "ko" }
+            if preferred.starts(with: "ru") { return "ru" }
             return "en"
         }
     }
