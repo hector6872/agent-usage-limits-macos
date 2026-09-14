@@ -135,60 +135,60 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
             return nil
         }
         
-        let fhUsed = Double(u["fh"] as? Int ?? 0)
-        let sdUsed = Double(u["sd"] as? Int ?? 0)
+        let fhUsed = (u["fh"] as? NSNumber)?.doubleValue ?? Double(u["fh"] as? Int ?? 0)
+        let sdUsed = (u["sd"] as? NSNumber)?.doubleValue ?? Double(u["sd"] as? Int ?? 0)
         
-        // Find when current 5h window started by looking back for the start of positive usage
-        let fiveHoursAgo = now.addingTimeInterval(-5 * 3600)
-        var sessionStartTime: Date? = nil
-        
-        for s in samples.reversed() {
-            guard let tMs = s["t"] as? Double else { continue }
-            let tDate = Date(timeIntervalSince1970: tMs / 1000)
-            guard tDate > fiveHoursAgo else { break }
-            
-            let uSample = s["u"] as? [String: Any]
-            let fh = uSample?["fh"] as? Int ?? 0
-            if fh > 0 {
-                sessionStartTime = tDate
-            } else {
-                break
-            }
-        }
-        
+        // 1. Calculate 5-hour short window reset
         var shortResetDate: Date? = nil
-        if let sessionStart = sessionStartTime {
-            let candidate = sessionStart.addingTimeInterval(5 * 3600)
+        if fhUsed > 0 {
+            let fiveHoursAgo = now.addingTimeInterval(-5 * 3600)
+            var sessionStartTime: Date? = nil
+            var prevSampleTime = (latest["t"] as? Double).map { Date(timeIntervalSince1970: $0 / 1000) } ?? now
+            var prevSampleFH = fhUsed
+            
+            for s in samples.dropLast().reversed() {
+                guard let tMs = s["t"] as? Double else { continue }
+                let tDate = Date(timeIntervalSince1970: tMs / 1000)
+                let uDict = s["u"] as? [String: Any]
+                let fh = (uDict?["fh"] as? NSNumber)?.doubleValue ?? Double(uDict?["fh"] as? Int ?? 0)
+                
+                // Break if: gap > 5h, or fh == 0 (idle period before this session),
+                // or sudden reset drop (previous window cleared)
+                if prevSampleTime.timeIntervalSince(tDate) > (5 * 3600) || fh == 0 || fh < prevSampleFH * 0.3 {
+                    sessionStartTime = prevSampleTime
+                    break
+                }
+                
+                sessionStartTime = tDate
+                prevSampleTime = tDate
+                prevSampleFH = fh
+                
+                if tDate < fiveHoursAgo {
+                    break
+                }
+            }
+            
+            let effectiveStart = sessionStartTime ?? prevSampleTime
+            let candidate = effectiveStart.addingTimeInterval(5 * 3600)
             if candidate > now {
                 shortResetDate = candidate
-            }
-        }
-        
-        // Find when current 7d weekly window started
-        let sevenDaysAgo = now.addingTimeInterval(-7 * 86400)
-        var weeklyStartTime: Date? = nil
-        
-        for s in samples.reversed() {
-            guard let tMs = s["t"] as? Double else { continue }
-            let tDate = Date(timeIntervalSince1970: tMs / 1000)
-            guard tDate > sevenDaysAgo else { break }
-            
-            let uSample = s["u"] as? [String: Any]
-            let sd = uSample?["sd"] as? Int ?? 0
-            if sd > 0 {
-                weeklyStartTime = tDate
             } else {
-                break
+                // If the session has been continuously active for >= 5h, next slot rolls forward
+                shortResetDate = now.addingTimeInterval(1800)
             }
         }
         
+        // 2. Calculate 7-day weekly window reset
+        // Claude weekly rate limits reset globally every Sunday at 05:00 UTC (07:00 AM CEST in Spain)
         var weeklyResetDate: Date? = nil
-        if let weeklyStart = weeklyStartTime {
-            let candidate = weeklyStart.addingTimeInterval(7 * 86400)
-            if candidate > now {
-                weeklyResetDate = candidate
-            }
-        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        var comps = DateComponents()
+        comps.weekday = 1 // Sunday
+        comps.hour = 5
+        comps.minute = 0
+        comps.second = 0
+        weeklyResetDate = calendar.nextDate(after: now, matching: comps, matchingPolicy: .nextTime)
         
         return ParsedClaudeQuota(
             shortUsedPercent: max(0.0, min(100.0, fhUsed)),
@@ -283,7 +283,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("oauth-2025-04-20", forHTTPHeaderField: "anthropic-beta")
-        request.setValue("agent-usage-limits", forHTTPHeaderField: "User-Agent")
+        request.setValue("claude-code/0.2.29 (Darwin; arm64)", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 12.0
         
         guard let (data, response) = try? await URLSession.shared.data(for: request),
@@ -322,27 +322,44 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         let fiveHourUsed = normalizePercent(fiveHourRaw)
         let fiveHourReset = (fiveHour?["resets_at"] as? String).flatMap(parseISODate)
         
-        // 2. Weekly limit: seven_day (or fallback to sonnet/opus/generic limits)
-        var weeklyUsed: Double = 0.0
-        var weeklyReset: Date? = nil
+        // 2. Weekly limit: inspect all candidate weekly windows (seven_day_sonnet, seven_day, seven_day_opus)
+        // Select the most restrictive active limit (highest utilization) and valid reset date
+        var bestWeeklyUsed: Double = 0.0
+        var bestWeeklyReset: Date? = nil
+        var foundWeekly = false
         
-        if let sevenDay = json["seven_day"] as? [String: Any] {
-            weeklyUsed = normalizePercent((sevenDay["utilization"] as? NSNumber)?.doubleValue)
-            weeklyReset = (sevenDay["resets_at"] as? String).flatMap(parseISODate)
-        } else if let sonnet = json["seven_day_sonnet"] as? [String: Any] {
-            weeklyUsed = normalizePercent((sonnet["utilization"] as? NSNumber)?.doubleValue)
-            weeklyReset = (sonnet["resets_at"] as? String).flatMap(parseISODate)
-        } else if let opus = json["seven_day_opus"] as? [String: Any] {
-            weeklyUsed = normalizePercent((opus["utilization"] as? NSNumber)?.doubleValue)
-            weeklyReset = (opus["resets_at"] as? String).flatMap(parseISODate)
-        } else if let limits = json["limits"] as? [[String: Any]] {
+        let candidateKeys = ["seven_day_sonnet", "seven_day", "seven_day_opus"]
+        for key in candidateKeys {
+            guard let bucket = json[key] as? [String: Any] else { continue }
+            let rawUtil = (bucket["utilization"] as? NSNumber)?.doubleValue
+            let reset = (bucket["resets_at"] as? String).flatMap(parseISODate)
+            
+            if let util = rawUtil {
+                let normalized = normalizePercent(util)
+                if !foundWeekly || normalized > bestWeeklyUsed {
+                    bestWeeklyUsed = normalized
+                    bestWeeklyReset = reset ?? bestWeeklyReset
+                    foundWeekly = true
+                } else if bestWeeklyReset == nil, let reset = reset {
+                    bestWeeklyReset = reset
+                }
+            } else if reset != nil && bestWeeklyReset == nil {
+                bestWeeklyReset = reset
+            }
+        }
+        
+        // Fallback: check generic limits array if candidate keys didn't yield anything
+        if !foundWeekly, let limits = json["limits"] as? [[String: Any]] {
             for limit in limits {
                 let kind = (limit["kind"] as? String)?.lowercased() ?? ""
                 if kind.contains("weekly") || kind.contains("seven_day") {
                     let raw = (limit["percent"] as? NSNumber)?.doubleValue ?? (limit["utilization"] as? NSNumber)?.doubleValue
-                    weeklyUsed = normalizePercent(raw)
-                    weeklyReset = (limit["resets_at"] as? String).flatMap(parseISODate)
-                    break
+                    if let raw = raw {
+                        bestWeeklyUsed = normalizePercent(raw)
+                        bestWeeklyReset = (limit["resets_at"] as? String).flatMap(parseISODate)
+                        foundWeekly = true
+                        break
+                    }
                 }
             }
         }
@@ -350,17 +367,13 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         return ParsedClaudeQuota(
             shortUsedPercent: fiveHourUsed,
             shortResetDate: fiveHourReset,
-            weeklyUsedPercent: weeklyUsed,
-            weeklyResetDate: weeklyReset
+            weeklyUsedPercent: bestWeeklyUsed,
+            weeklyResetDate: bestWeeklyReset
         )
     }
     
     private func normalizePercent(_ value: Double?) -> Double {
-        guard let value = value else { return 0.0 }
-        // If API returns fraction between 0.0 and 1.0 (e.g. 0.20 for 20%), convert to 0..100
-        if value > 0.0 && value <= 1.0 {
-            return value * 100.0
-        }
+        guard let value = value, value.isFinite else { return 0.0 }
         return max(0.0, min(100.0, value))
     }
     
@@ -638,7 +651,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: binary)
-        process.arguments = ["/usage", "--allowed-tools", ""]
+        process.arguments = ["-p", "/usage", "--allowedTools", ""]
         
         var env = ProcessInfo.processInfo.environment
         env.removeValue(forKey: "CLAUDE_CODE_OAUTH_TOKEN")
@@ -653,7 +666,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             process.waitUntilExit()
             
-            guard let text = String(data: data, encoding: .utf8) else { return nil }
+            guard let text = String(data: data, encoding: .utf8), !text.isEmpty else { return nil }
             return parseCLIOutput(text)
         } catch {
             return nil
@@ -661,11 +674,14 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
     }
     
     private func findClaudeBinary() -> String? {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
         let candidates = [
             "/usr/local/bin/claude",
             "/opt/homebrew/bin/claude",
-            "\(FileManager.default.homeDirectoryForCurrentUser.path)/.npm-global/bin/claude",
-            "\(FileManager.default.homeDirectoryForCurrentUser.path)/.nvm/versions/node/current/bin/claude"
+            "\(home)/.local/bin/claude",
+            "\(home)/.npm-global/bin/claude",
+            "\(home)/.nvm/versions/node/current/bin/claude",
+            "\(home)/.cargo/bin/claude"
         ]
         for path in candidates {
             if FileManager.default.isExecutableFile(atPath: path) {
@@ -693,8 +709,11 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
     private func parseCLIOutput(_ text: String) -> ParsedClaudeQuota? {
         let clean = text.replacingOccurrences(of: #"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"#, with: "", options: .regularExpression)
         
-        let sessionInfo = parseUsageSection(label: "Current session", text: clean)
-        let weeklyInfo = parseUsageSection(label: "Current week", text: clean)
+        let sessionLabels = ["Current session", "5-hour limit", "5-hour", "Session limit", "Session"]
+        let weeklyLabels = ["Current week", "Weekly limit", "Weekly", "Week", "7-day"]
+        
+        let sessionInfo = parseUsageSection(labels: sessionLabels, text: clean)
+        let weeklyInfo = parseUsageSection(labels: weeklyLabels, text: clean)
         
         guard let sessionUsed = sessionInfo.usedPercent else {
             return nil
@@ -708,14 +727,24 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         )
     }
     
-    private func parseUsageSection(label: String, text: String) -> (usedPercent: Double?, resetDate: Date?) {
+    private func parseUsageSection(labels: [String], text: String) -> (usedPercent: Double?, resetDate: Date?) {
+        for label in labels {
+            let result = parseSingleUsageSection(label: label, text: text)
+            if result.usedPercent != nil || result.resetDate != nil {
+                return result
+            }
+        }
+        return (nil, nil)
+    }
+    
+    private func parseSingleUsageSection(label: String, text: String) -> (usedPercent: Double?, resetDate: Date?) {
         guard let labelRange = text.range(of: label, options: [.caseInsensitive]) else {
             return (nil, nil)
         }
         let section = String(text[labelRange.lowerBound...])
         
         // Find next section boundary if any
-        let nextSectionPattern = #"\n\s*(?:Current\s+session|Current\s+week|What's\s+contributing)"#
+        let nextSectionPattern = #"\n\s*(?:Current\s+session|Current\s+week|5-hour|Weekly|What's\s+contributing)"#
         let boundedSection: String
         if let nextMatch = section.range(of: nextSectionPattern, options: [.regularExpression], range: section.index(after: section.startIndex)..<section.endIndex) {
             boundedSection = String(section[..<nextMatch.lowerBound])

@@ -10,10 +10,12 @@ RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 echo "==> Building ${APP_NAME} in Release mode..."
 swift build -c release
 
-echo "==> Generating App Icons..."
-swift scripts/generate_icon.swift
-if command -v iconutil >/dev/null 2>&1; then
-    iconutil -c icns resources/AppIcon.iconset -o resources/AppIcon.icns
+if [ -f "scripts/generate_icon.swift" ]; then
+    echo "==> Generating App Icons..."
+    swift scripts/generate_icon.swift
+    if command -v iconutil >/dev/null 2>&1; then
+        iconutil -c icns resources/AppIcon.iconset -o resources/AppIcon.icns
+    fi
 fi
 
 echo "==> Packaging into ${BUNDLE_DIR}..."

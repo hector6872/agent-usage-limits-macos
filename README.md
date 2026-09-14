@@ -22,12 +22,18 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
 
 - **Menu Bar Integration**: Real-time quota tracking for multiple AI providers in a compact, tabular horizontal layout with adaptive Light/Dark mode typography.
 - **Dual-Window Monitoring**:
-  - **Session Limits**: Tracks short rolling windows (e.g. 5-hour limit).
-  - **Weekly Limits**: Tracks rolling weekly allocations.
-  - **Reset Timers**: Shows exact countdowns until quota replenishment (`resets in 1h 45m`, `resets soon`, etc.).
+  - **Session Limits**: Tracks short rolling windows (e.g. 5-hour rolling session limit).
+  - **Weekly Limits**: Tracks rolling weekly allocations (e.g. Anthropic's 7-day limits).
+  - **Smart Reset Timers**: Displays precise localized schedules and countdowns:
+    - **Short Windows (< 24h)**: High-precision hours and minutes countdown (e.g. `resets in 1h 45m` / `reinicia en 1h 45m`).
+    - **Weekly Windows (> 24h)**: Localized target day and time plus duration (e.g. `Sun 7:00 AM (5d 17h)` / `dom, 7:00 (5d 17h)`).
 - **Live Provider Integration**:
   - **Antigravity**: Local language server probing (`agentapi`, `language_server`, `agy`, `gemini-cli`) & Google Cloud Code OAuth tokens.
-  - **Claude**: Multi-tier live probing via official OAuth usage APIs, Claude Desktop real-time plan telemetry history (`plan-usage-history.json`), and CLI fallback (`claude /usage`).
+  - **Claude**: 
+    - Official Anthropic OAuth usage API (`https://api.anthropic.com/api/oauth/usage`) with automatic credential discovery from macOS Keychain (`Claude Code-credentials`), config files (`~/.claude/.credentials.json`), or environment variables.
+    - Comprehensive multi-bucket parsing: monitors `seven_day_sonnet`, `seven_day`, `seven_day_opus`, and generic `limits` to track the most restrictive active limit.
+    - Global weekly reset alignment: authoritative schedule anchored to Anthropic's global tumbling reset every **Sunday at 05:00 UTC** (07:00 AM CEST in Madrid, 01:00 AM EDT in New York).
+    - Local fallback via Claude Desktop telemetry (`plan-usage-history.json`) and non-interactive CLI probing (`claude -p "/usage" --allowedTools ""`).
   - **Codex**: Official OAuth usage API (`https://chatgpt.com/backend-api/wham/usage`) with automatic token renewal and CLI fallback (`codex usage`).
 - **Strict Process & Active State Detection**:
   - Automatically identifies whether an AI provider or CLI is actively running in the background. Inactive agents are cleanly represented (`--%` / `Not active`) without phantom usage.
@@ -55,6 +61,23 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
     - 🇰🇷 **한국어** (`ko`)
 - **Zero External Dependencies**:
   - Pure Swift 6 built on SwiftUI, AppKit, and Foundation.
+
+---
+
+## 🔍 How Quota Tracking & Resets Work
+
+| Provider | Session Window | Weekly Window | Reset Calculation & Sources |
+| :--- | :--- | :--- | :--- |
+| **Claude** 🟣 | 5-hour rolling session limit | 7-day multi-model allocation (`seven_day_sonnet`, `seven_day`, `seven_day_opus`) | **1. Anthropic OAuth API** (`https://api.anthropic.com/api/oauth/usage`) with Keychain token discovery.<br>**2. Global Tumbling Weekly Schedule**: Resets every **Sunday at 05:00 UTC** (07:00 AM CEST in Spain / 01:00 AM EDT in NY).<br>**3. Local Telemetry Fallback**: Analyzes `plan-usage-history.json` and probes CLI (`claude -p "/usage"`). |
+| **Antigravity** 🔵 | 5-hour rolling session limit | Weekly prompt/token quota | Probes local language server socket (`agentapi`, `language_server`, `agy`) and Google Cloud Code OAuth tokens. |
+| **Codex** 🟢 | 5-hour sliding prompt limit | Weekly allocation limit | Official ChatGPT/Codex OAuth usage endpoint (`https://chatgpt.com/backend-api/wham/usage`) with automatic token renewal and `codex usage` CLI fallback. |
+
+### Reset Time Formatting
+- **Resets $> 24\text{h}$ away** (e.g. Weekly quota): Formatted with localized day of week, local time, and duration breakdown:
+  - *Spanish*: `dom, 7:00 (5d 17h)`
+  - *English*: `Sun 7:00 AM (5d 17h)`
+- **Resets $< 24\text{h}$ away** (e.g. 5-hour session window): Formatted with exact hours and minutes:
+  - `reinicia en 1h 45m` / `resets in 1h 45m`
 
 ---
 
