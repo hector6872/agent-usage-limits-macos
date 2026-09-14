@@ -307,9 +307,15 @@ struct ProviderSectionView: View {
                     
                     if usage.isActive {
                         let remaining = usage.weeklyWindow.roundedRemainingPercent
-                        Text("\(remaining)% · \(usage.weeklyWindow.localizedResetsFormatted)")
-                            .font(.system(size: 13.5, weight: .regular))
-                            .foregroundColor(.primary.opacity(0.85))
+                        if remaining >= 100 && usage.weeklyWindow.resetDate == nil {
+                            Text("\(remaining)%")
+                                .font(.system(size: 13.5, weight: .regular))
+                                .foregroundColor(.primary.opacity(0.85))
+                        } else {
+                            Text("\(remaining)% · \(usage.weeklyWindow.localizedResetsFormatted)")
+                                .font(.system(size: 13.5, weight: .regular))
+                                .foregroundColor(.primary.opacity(0.85))
+                        }
                     } else {
                         Text(l10n["not_active"])
                             .font(.system(size: 13.5, weight: .regular))
@@ -335,9 +341,15 @@ struct ProviderSectionView: View {
                     
                     if usage.isActive {
                         let remaining = usage.shortWindow.roundedRemainingPercent
-                        Text("\(remaining)% · \(usage.shortWindow.localizedResetsFormatted)")
-                            .font(.system(size: 13.5, weight: .regular))
-                            .foregroundColor(.primary.opacity(0.85))
+                        if remaining >= 100 && usage.shortWindow.resetDate == nil {
+                            Text("\(remaining)%")
+                                .font(.system(size: 13.5, weight: .regular))
+                                .foregroundColor(.primary.opacity(0.85))
+                        } else {
+                            Text("\(remaining)% · \(usage.shortWindow.localizedResetsFormatted)")
+                                .font(.system(size: 13.5, weight: .regular))
+                                .foregroundColor(.primary.opacity(0.85))
+                        }
                     } else {
                         Text(l10n["not_active"])
                             .font(.system(size: 13.5, weight: .regular))

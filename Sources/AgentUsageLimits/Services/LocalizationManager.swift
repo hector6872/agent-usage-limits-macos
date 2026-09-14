@@ -147,14 +147,14 @@ public final class LocalizationManager: ObservableObject {
         return relativeDateFormatter.localizedString(for: date, relativeTo: Date())
     }
     
-    /// Formats countdown remaining time for quota resets (e.g. "resets 2h", "reinicia en 2h")
+    /// Formats countdown remaining time for quota resets (e.g. "dom, 7:00 (5d 17h)", "reinicia en 2h 15m")
     public func resetsCountdown(until date: Date?) -> String {
         guard let date = date else { return string("resets_soon") }
         let interval = date.timeIntervalSinceNow
         let prefix = string("resets_prefix")
         
         if interval <= 0 {
-            return "\(prefix) <1m"
+            return string("resets_soon")
         }
         
         let days = Int(interval) / 86400
@@ -162,9 +162,23 @@ public final class LocalizationManager: ObservableObject {
         let minutes = (Int(interval) % 3600) / 60
         
         if days > 0 {
-            return "\(prefix) \(days)d"
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: resolvedCode)
+            formatter.timeZone = .current
+            formatter.setLocalizedDateFormatFromTemplate("EEEjjmm")
+            let formattedDate = formatter.string(from: date)
+            
+            if hours > 0 {
+                return "\(formattedDate) (\(days)d \(hours)h)"
+            } else {
+                return "\(formattedDate) (\(days)d)"
+            }
         } else if hours > 0 {
-            return "\(prefix) \(hours)h"
+            if minutes > 0 {
+                return "\(prefix) \(hours)h \(minutes)m"
+            } else {
+                return "\(prefix) \(hours)h"
+            }
         } else if minutes > 0 {
             return "\(prefix) \(minutes)m"
         } else {
