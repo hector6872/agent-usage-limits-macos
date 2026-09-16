@@ -2,6 +2,32 @@ import Foundation
 import AppKit
 import Darwin
 
+/// Custom delegate to trust self-signed localhost SSL certificates from Antigravity language_server
+private final class LocalhostSessionDelegate: NSObject, URLSessionDelegate, @unchecked Sendable {
+    static let shared = LocalhostSessionDelegate()
+    
+    func urlSession(
+        _ session: URLSession,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+           let serverTrust = challenge.protectionSpace.serverTrust,
+           ["127.0.0.1", "localhost"].contains(challenge.protectionSpace.host) {
+            completionHandler(.useCredential, URLCredential(trust: serverTrust))
+            return
+        }
+        completionHandler(.performDefaultHandling, nil)
+    }
+}
+
+private let localhostURLSession: URLSession = {
+    let config = URLSessionConfiguration.ephemeral
+    config.timeoutIntervalForRequest = 3.5
+    config.timeoutIntervalForResource = 5.0
+    return URLSession(configuration: config, delegate: LocalhostSessionDelegate.shared, delegateQueue: nil)
+}()
+
 /// Provider for Google Antigravity (AGY Agent / Gemini quotas)
 /// Replicates the official Google Cloud Code quota API & Local Language Server probe
 /// as used by Antigravity.
@@ -116,7 +142,12 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
             return buildProviderUsage(from: localQuota, isActive: true, now: now)
         }
         
-        // 2. Try Google Cloud Code endpoints with OAuth token from Keychain / file
+        // 2. Try agy CLI fallback
+        if let cliQuota = await probeCLISummary() {
+            return buildProviderUsage(from: cliQuota, isActive: true, now: now)
+        }
+        
+        // 3. Try Google Cloud Code endpoints with OAuth token from Keychain / file
         if let token = await loadOAuthToken() {
             if let cloudQuota = await fetchCloudCodeQuota(token: token) {
                 return buildProviderUsage(from: cloudQuota, isActive: true, now: now)
@@ -230,28 +261,65 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
             "/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary",
             "/exa.language_server_pb.LanguageServerService/GetUserStatus"
         ]
+        let schemes = ["https", "http"]
         
         for port in ports {
-            for path in paths {
-                guard let url = URL(string: "http://127.0.0.1:\(port)\(path)") else { continue }
-                var request = URLRequest(url: url)
-                request.httpMethod = "POST"
-                request.timeoutInterval = 3.0
-                request.httpBody = Data("{}".utf8)
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.setValue("application/json", forHTTPHeaderField: "Accept")
-                request.setValue(procInfo.csrfToken, forHTTPHeaderField: "X-Csrf-Token")
-                request.setValue("antigravity", forHTTPHeaderField: "User-Agent")
-                
-                if let (data, response) = try? await URLSession.shared.data(for: request),
-                   let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
-                    if let parsed = parseQuotaResponse(data) {
-                        return parsed
+            for scheme in schemes {
+                for path in paths {
+                    guard let url = URL(string: "\(scheme)://127.0.0.1:\(port)\(path)") else { continue }
+                    var request = URLRequest(url: url)
+                    request.httpMethod = "POST"
+                    request.timeoutInterval = 3.0
+                    request.httpBody = Data("{}".utf8)
+                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    request.setValue("application/json", forHTTPHeaderField: "Accept")
+                    request.setValue(procInfo.csrfToken, forHTTPHeaderField: "X-Codeium-Csrf-Token")
+                    request.setValue(procInfo.csrfToken, forHTTPHeaderField: "X-Csrf-Token")
+                    request.setValue("1", forHTTPHeaderField: "Connect-Protocol-Version")
+                    request.setValue("antigravity", forHTTPHeaderField: "User-Agent")
+                    
+                    if let (data, response) = try? await localhostURLSession.data(for: request),
+                       let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
+                        if let parsed = parseQuotaResponse(data) {
+                            return parsed
+                        }
                     }
                 }
             }
         }
         return nil
+    }
+    
+    // MARK: - agy CLI Fallback
+    
+    private func probeCLISummary() async -> ParsedQuotaSummary? {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let candidates = [
+            "/opt/homebrew/bin/agy",
+            "/usr/local/bin/agy",
+            "\(home)/.cargo/bin/agy",
+            "\(home)/.local/bin/agy",
+            "/usr/bin/agy"
+        ]
+        
+        guard let agyPath = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+            return nil
+        }
+        
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: agyPath)
+        process.arguments = ["-p", "/usage", "--output-format", "json"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        do {
+            try process.run()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else { return nil }
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            return parseQuotaResponse(data)
+        } catch {
+            return nil
+        }
     }
     
     // MARK: - Cloud Code API
@@ -348,32 +416,115 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
     private func parseQuotaResponse(_ data: Data) -> ParsedQuotaSummary? {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
         
-        let root = (json["response"] as? [String: Any]) ?? json
+        let root = (json["response"] as? [String: Any])
+            ?? (json["summary"] as? [String: Any])
+            ?? json
         guard let groups = root["groups"] as? [[String: Any]] else {
             // Check fallback for clientModelConfigs in GetUserStatus
             return parseFallbackUserStatus(root)
         }
         
-        var bucketMap: [String: [String: Any]] = [:]
-        for group in groups {
+        // 1. Focus on Gemini models (exclude Claude / GPT / 3P models)
+        let geminiGroups = groups.filter { group in
+            let title = ((group["displayName"] as? String) ?? (group["name"] as? String) ?? "").lowercased()
+            return title.contains("gemini")
+        }
+        
+        let targetGroups = !geminiGroups.isEmpty ? geminiGroups : groups.filter { group in
+            let title = ((group["displayName"] as? String) ?? (group["name"] as? String) ?? "").lowercased()
+            return !title.contains("claude") && !title.contains("gpt") && !title.contains("3p")
+        }
+        let effectiveGroups = !targetGroups.isEmpty ? targetGroups : groups
+        
+        var allBuckets: [[String: Any]] = []
+        for group in effectiveGroups {
             if let buckets = group["buckets"] as? [[String: Any]] {
-                for bucket in buckets {
-                    if let bucketId = bucket["bucketId"] as? String {
-                        bucketMap[bucketId] = bucket
-                    }
-                }
+                allBuckets.append(contentsOf: buckets)
             }
         }
         
-        // Match gemini-5h and gemini-weekly exclusively
-        let shortBucket = bucketMap["gemini-5h"]
-        let weeklyBucket = bucketMap["gemini-weekly"]
+        // Cadence aliases
+        let sessionAliases: Set<String> = [
+            "session", "5h", "5-hour", "five-hour", "five hour", "promo", "bonus", "trial", "boost"
+        ]
+        let weeklyAliases: Set<String> = [
+            "weekly", "week", "7d", "7-day"
+        ]
         
-        let shortRemainingFraction = (shortBucket?["remainingFraction"] as? NSNumber)?.doubleValue ?? 1.0
-        let weeklyRemainingFraction = (weeklyBucket?["remainingFraction"] as? NSNumber)?.doubleValue ?? 1.0
+        func extractRemainingFraction(_ bucket: [String: Any]?) -> Double {
+            guard let b = bucket else { return 1.0 }
+            if let rf = (b["remainingFraction"] as? NSNumber)?.doubleValue {
+                return rf
+            }
+            if let remaining = b["remaining"] as? [String: Any],
+               let rf = (remaining["remainingFraction"] as? NSNumber)?.doubleValue {
+                return rf
+            }
+            return 1.0
+        }
         
-        let shortResetDate = (shortBucket?["resetTime"] as? String).flatMap(parseDate)
-        let weeklyResetDate = (weeklyBucket?["resetTime"] as? String).flatMap(parseDate)
+        func extractResetDate(_ bucket: [String: Any]?) -> Date? {
+            guard let b = bucket else { return nil }
+            if let resetStr = b["resetTime"] as? String {
+                return parseDate(resetStr)
+            }
+            if let remaining = b["remaining"] as? [String: Any],
+               let resetStr = remaining["resetTime"] as? String {
+                return parseDate(resetStr)
+            }
+            return nil
+        }
+        
+        func matchesCadence(_ bucket: [String: Any], aliases: Set<String>) -> Bool {
+            if (bucket["disabled"] as? Bool) == true { return false }
+            let bucketId = ((bucket["bucketId"] as? String) ?? "").lowercased().replacingOccurrences(of: "_", with: "-")
+            let displayName = ((bucket["displayName"] as? String) ?? "").lowercased().replacingOccurrences(of: "_", with: "-")
+            let window = ((bucket["window"] as? String) ?? "").lowercased().replacingOccurrences(of: "_", with: "-")
+            
+            for alias in aliases {
+                if bucketId.contains(alias) || displayName.contains(alias) || window.contains(alias) {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        // Categorize buckets
+        var shortBuckets: [[String: Any]] = []
+        var weeklyBuckets: [[String: Any]] = []
+        
+        for bucket in allBuckets {
+            if matchesCadence(bucket, aliases: sessionAliases) {
+                shortBuckets.append(bucket)
+            }
+            if matchesCadence(bucket, aliases: weeklyAliases) {
+                weeklyBuckets.append(bucket)
+            }
+        }
+        
+        // Fallback to legacy exact bucketId mapping if lists are empty
+        var bucketMap: [String: [String: Any]] = [:]
+        for b in allBuckets {
+            if let id = b["bucketId"] as? String {
+                bucketMap[id] = b
+            }
+        }
+        
+        // Select the most favorable (maximum remainingFraction) bucket for each window
+        // When Google grants an early reset or marketing bonus, the user has the benefit of that bonus (e.g. 100%)
+        let bestShortBucket = shortBuckets.max { a, b in
+            extractRemainingFraction(a) < extractRemainingFraction(b)
+        } ?? bucketMap["gemini-5h"]
+        
+        let bestWeeklyBucket = weeklyBuckets.max { a, b in
+            extractRemainingFraction(a) < extractRemainingFraction(b)
+        } ?? bucketMap["gemini-weekly"]
+        
+        let shortRemainingFraction = extractRemainingFraction(bestShortBucket)
+        let weeklyRemainingFraction = extractRemainingFraction(bestWeeklyBucket)
+        
+        let shortResetDate = extractResetDate(bestShortBucket)
+        let weeklyResetDate = extractResetDate(bestWeeklyBucket)
         
         let shortUsedPercent = max(0.0, min(100.0, (1.0 - shortRemainingFraction) * 100.0))
         let weeklyUsedPercent = max(0.0, min(100.0, (1.0 - weeklyRemainingFraction) * 100.0))
@@ -393,18 +544,39 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
             return nil
         }
         
-        for config in configs {
+        // Filter for Gemini models first, excluding Claude / GPT / 3P
+        let geminiConfigs = configs.filter { cfg in
+            let label = ((cfg["label"] as? String) ?? (cfg["modelId"] as? String) ?? "").lowercased()
+            return label.contains("gemini")
+        }
+        let targetConfigs = !geminiConfigs.isEmpty ? geminiConfigs : configs.filter { cfg in
+            let label = ((cfg["label"] as? String) ?? (cfg["modelId"] as? String) ?? "").lowercased()
+            return !label.contains("claude") && !label.contains("gpt") && !label.contains("3p")
+        }
+        let effectiveConfigs = !targetConfigs.isEmpty ? targetConfigs : configs
+        
+        var bestFraction: Double?
+        var bestResetDate: Date?
+        
+        for config in effectiveConfigs {
             if let quotaInfo = config["quotaInfo"] as? [String: Any],
                let remainingFraction = (quotaInfo["remainingFraction"] as? NSNumber)?.doubleValue {
                 let resetTime = (quotaInfo["resetTime"] as? String).flatMap(parseDate)
-                let used = max(0.0, min(100.0, (1.0 - remainingFraction) * 100.0))
-                return ParsedQuotaSummary(
-                    shortUsedPercent: used,
-                    shortResetDate: resetTime,
-                    weeklyUsedPercent: used,
-                    weeklyResetDate: resetTime
-                )
+                if bestFraction == nil || remainingFraction > bestFraction! {
+                    bestFraction = remainingFraction
+                    bestResetDate = resetTime
+                }
             }
+        }
+        
+        if let fraction = bestFraction {
+            let used = max(0.0, min(100.0, (1.0 - fraction) * 100.0))
+            return ParsedQuotaSummary(
+                shortUsedPercent: used,
+                shortResetDate: bestResetDate,
+                weeklyUsedPercent: used,
+                weeklyResetDate: bestResetDate
+            )
         }
         return nil
     }
@@ -453,5 +625,3 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         return String(text[r])
     }
 }
-
-

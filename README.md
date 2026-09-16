@@ -28,7 +28,10 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
     - **Short Windows (< 24h)**: High-precision hours and minutes countdown (e.g. `resets in 1h 45m` / `reinicia en 1h 45m`).
     - **Weekly Windows (> 24h)**: Localized target day and time plus duration (e.g. `Sun 7:00 AM (5d 17h)` / `dom, 7:00 (5d 17h)`).
 - **Live Provider Integration**:
-  - **Antigravity**: Local language server probing (`agentapi`, `language_server`, `agy`, `gemini-cli`) & Google Cloud Code OAuth tokens.
+  - **Antigravity**:
+    - Local Connect-RPC HTTPS/HTTP language server probing (`agentapi`, `language_server`) with self-signed certificate handling and CSRF authentication.
+    - Dynamic Gemini quota & promo bonus detection (`gemini-5h`, `gemini-weekly`, `promo`, `bonus`, `boost`) selecting the effective maximum available quota and respecting expiration reset dates.
+    - Native CLI fallback via `agy -p /usage --output-format json` and remote Google Cloud Code OAuth tokens.
   - **Claude**: 
     - Official Anthropic OAuth usage API (`https://api.anthropic.com/api/oauth/usage`) with automatic credential discovery from macOS Keychain (`Claude Code-credentials`), config files (`~/.claude/.credentials.json`), or environment variables.
     - Comprehensive multi-bucket parsing: monitors `seven_day_sonnet`, `seven_day`, `seven_day_opus`, and generic `limits` to track the most restrictive active limit.
@@ -70,7 +73,7 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
 | Provider | Session Window | Weekly Window | Reset Calculation & Sources |
 | :--- | :--- | :--- | :--- |
 | **Claude** 🟣 | 5-hour rolling session limit | 7-day multi-model allocation (`seven_day_sonnet`, `seven_day`, `seven_day_opus`) | **1. Anthropic OAuth API** (`https://api.anthropic.com/api/oauth/usage`) with Keychain token discovery.<br>**2. Global Tumbling Weekly Schedule**: Resets every **Sunday at 05:00 UTC** (07:00 AM CEST in Spain / 01:00 AM EDT in NY).<br>**3. Local Telemetry Fallback**: Analyzes `plan-usage-history.json` and probes CLI (`claude -p "/usage"`). |
-| **Antigravity** 🔵 | 5-hour rolling session limit | Weekly prompt/token quota | Probes local language server socket (`agentapi`, `language_server`, `agy`) and Google Cloud Code OAuth tokens. |
+| **Antigravity** 🔵 | 5-hour rolling session limit | Weekly prompt/token quota | **1. Local Language Server Probe**: Connect-RPC HTTPS/HTTP socket (`language_server`) with loopback SSL support and CSRF auth.<br>**2. Dynamic Promo & Bonus Detection**: Identifies early resets, marketing promotions, and bonuses (`bonus`, `promo`, `boost`), picking the maximum available quota.<br>**3. Native CLI Fallback**: Non-interactive `agy -p /usage --output-format json` query.<br>**4. Remote Cloud Code OAuth**: Fallback via `cloudcode-pa.googleapis.com` token. |
 | **Codex** 🟢 | 5-hour sliding prompt limit | Weekly allocation limit | Official ChatGPT/Codex OAuth usage endpoint (`https://chatgpt.com/backend-api/wham/usage`) with automatic token renewal and `codex usage` CLI fallback. |
 
 ### Reset Time Formatting
