@@ -7,7 +7,7 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
 [![macOS 14+](https://img.shields.io/badge/macOS-14.0%2B-blue.svg)](https://www.apple.com/macos/)
 [![Swift 6](https://img.shields.io/badge/Swift-6.0-orange.svg)](https://www.swift.org/)
 [![SwiftUI](https://img.shields.io/badge/UI-SwiftUI%20%2B%20AppKit-green.svg)](https://developer.apple.com/xcode/swiftui/)
-[![License MIT](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
+[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC_BY--NC--SA_4.0-blueviolet.svg)](LICENSE)
 
 <p align="center">
   <img src="assets/menubar-preview.png" alt="Menu Bar Quota Overview" width="400" />
@@ -244,4 +244,8 @@ Contributions, feature requests, and bug reports are welcome! Please check out t
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)** License - see the [LICENSE](LICENSE) file for details.
+
+- **Attribution (BY)**: You must give appropriate credit and provide a link to the original repository.
+- **NonCommercial (NC)**: You may not use the material for commercial purposes (selling, commercial distribution, or monetized forks).
+- **ShareAlike (SA)**: If you remix, transform, or build upon the material, you must distribute your contributions under the same license.
