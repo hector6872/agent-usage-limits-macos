@@ -30,8 +30,9 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
 - **Live Provider Integration**:
   - **Antigravity**:
     - Local Connect-RPC HTTPS/HTTP language server probing (`agentapi`, `language_server`) with self-signed certificate handling and CSRF authentication.
-    - Dynamic Gemini quota & promo bonus detection (`gemini-5h`, `gemini-weekly`, `promo`, `bonus`, `boost`) selecting the effective maximum available quota and respecting expiration reset dates.
-    - Native CLI fallback via `agy -p /usage --output-format json` and remote Google Cloud Code OAuth tokens.
+    - **Dual Model Weekly Quotas**: Differentiates independent weekly limits for **Gemini models** (`gemini-weekly`) and **Gemini 4 Argon** (`gemini-argon-wtu-weekly`), alongside the shared 5-hour rolling session limit (`gemini-5h`).
+    - Dynamic Gemini promo & bonus detection (`promo`, `bonus`, `boost`) selecting the effective maximum available quota and respecting expiration reset dates.
+    - Native CLI fallback via `agy -p /usage --output-format json` (including `~/.gemini/bin/agy`) and remote Google Cloud Code OAuth tokens.
   - **Claude**: 
     - Official Anthropic OAuth usage API (`https://api.anthropic.com/api/oauth/usage`) with automatic credential discovery from macOS Keychain (`Claude Code-credentials`), config files (`~/.claude/.credentials.json`), or environment variables.
     - Comprehensive multi-bucket parsing: monitors `seven_day_sonnet`, `seven_day`, `seven_day_opus`, and generic `limits` to track the most restrictive active limit.
@@ -44,9 +45,10 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
   - Quota percentages are rounded up (`ceil`) for user clarity.
   - Critical levels ($< 25\%$) and exhausted limits ($0\%$) are highlighted in red.
 - **System Notifications for Critical Limits**:
-  - Native macOS alerts via `UNUserNotificationCenter` when any active provider drops into critical health on either session or weekly quotas (with smart deduplication).
+  - Native macOS alerts via `UNUserNotificationCenter` when any active provider drops into critical health on session, weekly, or Argon quotas (with smart deduplication).
 - **Settings & Customization Drawer**:
   - Enable/disable individual providers.
+  - **Antigravity Menu Bar Model Selector**: Choose whether to show **Gemini** or **Argon** weekly quota in the compact macOS menu bar.
   - Configurable auto-refresh frequency (1m, 3m, 5m, 15m, 30m) with 1-minute cooldown protection.
   - Critical quota notification toggle.
   - Native **Launch at Login** support via `SMAppService`.
@@ -73,7 +75,7 @@ A native, lightweight macOS menu bar application designed to monitor your AI cod
 | Provider | Session Window | Weekly Window | Reset Calculation & Sources |
 | :--- | :--- | :--- | :--- |
 | **Claude** 🟣 | 5-hour rolling session limit | 7-day multi-model allocation (`seven_day_sonnet`, `seven_day`, `seven_day_opus`) | **1. Anthropic OAuth API** (`https://api.anthropic.com/api/oauth/usage`) with Keychain token discovery.<br>**2. Global Tumbling Weekly Schedule**: Resets every **Sunday at 05:00 UTC** (07:00 AM CEST in Spain / 01:00 AM EDT in NY).<br>**3. Local Telemetry Fallback**: Analyzes `plan-usage-history.json` and probes CLI (`claude -p "/usage"`). |
-| **Antigravity** 🔵 | 5-hour rolling session limit | Weekly prompt/token quota | **1. Local Language Server Probe**: Connect-RPC HTTPS/HTTP socket (`language_server`) with loopback SSL support and CSRF auth.<br>**2. Dynamic Promo & Bonus Detection**: Identifies early resets, marketing promotions, and bonuses (`bonus`, `promo`, `boost`), picking the maximum available quota.<br>**3. Native CLI Fallback**: Non-interactive `agy -p /usage --output-format json` query.<br>**4. Remote Cloud Code OAuth**: Fallback via `cloudcode-pa.googleapis.com` token. |
+| **Antigravity** 🔵 | 5-hour rolling session limit (shared) | Independent weekly limits for **Gemini** (`gemini-weekly`) and **Argon** (`gemini-argon-wtu-weekly`) | **1. Local Language Server Probe**: Connect-RPC HTTPS/HTTP socket (`language_server`) with loopback SSL support and CSRF auth.<br>**2. Argon Separation**: Identifies separate Argon buckets (`gemini-argon-wtu-weekly`) with configurable menu bar display selector.<br>**3. Dynamic Promo & Bonus Detection**: Identifies early resets, marketing promotions, and bonuses (`bonus`, `promo`, `boost`), picking the maximum available quota.<br>**4. Native CLI Fallback**: Non-interactive `agy -p /usage --output-format json` query.<br>**5. Remote Cloud Code OAuth**: Fallback via `cloudcode-pa.googleapis.com` token. |
 | **Codex** 🟢 | 5-hour sliding prompt limit | Weekly allocation limit | Official ChatGPT/Codex OAuth usage endpoint (`https://chatgpt.com/backend-api/wham/usage`) with automatic token renewal and `codex usage` CLI fallback. |
 
 ### Reset Time Formatting
