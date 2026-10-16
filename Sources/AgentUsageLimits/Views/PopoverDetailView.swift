@@ -92,6 +92,24 @@ public struct PopoverDetailView: View {
                     .toggleStyle(.switch)
                     .controlSize(.mini)
                 }
+                
+                if provider.id == "antigravity" && provider.isEnabled {
+                    HStack {
+                        Text(l10n["menubar_model_label"])
+                            .font(.system(size: 11.5))
+                            .foregroundColor(.secondary)
+                            .padding(.leading, 18)
+                        Spacer()
+                        Picker("", selection: $usageManager.antigravityMenuBarModel) {
+                            Text("Gemini").tag(UsageManager.AntigravityMenuBarModel.gemini)
+                            Text("Argon").tag(UsageManager.AntigravityMenuBarModel.argon)
+                        }
+                        .pickerStyle(.menu)
+                        .controlSize(.mini)
+                        .frame(width: 95)
+                    }
+                    .padding(.vertical, 1)
+                }
             }
             
             Divider().padding(.vertical, 2)
@@ -296,10 +314,10 @@ struct ProviderSectionView: View {
                     .opacity(0.6)
             }
             
-            // Weekly limit row
+            // Weekly limit row (Gemini / standard)
             VStack(alignment: .leading, spacing: 5) {
                 HStack {
-                    Text(usage.weeklyWindow.localizedTitle)
+                    Text(usage.argonWindow != nil ? "Gemini (\(usage.weeklyWindow.localizedTitle))" : usage.weeklyWindow.localizedTitle)
                         .font(.system(size: 13.5, weight: .regular))
                         .foregroundColor(.primary)
                     
@@ -330,7 +348,43 @@ struct ProviderSectionView: View {
                 )
             }
             
-            // 5-Hour / Short limit row
+            // Argon limit row (if present)
+            if let argonWindow = usage.argonWindow {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack {
+                        Text(argonWindow.localizedTitle)
+                            .font(.system(size: 13.5, weight: .regular))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        if usage.isActive {
+                            let remaining = argonWindow.roundedRemainingPercent
+                            if remaining >= 100 && argonWindow.resetDate == nil {
+                                Text("\(remaining)%")
+                                    .font(.system(size: 13.5, weight: .regular))
+                                    .foregroundColor(.primary.opacity(0.85))
+                            } else {
+                                Text("\(remaining)% · \(argonWindow.localizedResetsFormatted)")
+                                    .font(.system(size: 13.5, weight: .regular))
+                                    .foregroundColor(.primary.opacity(0.85))
+                            }
+                        } else {
+                            Text(l10n["not_active"])
+                                .font(.system(size: 13.5, weight: .regular))
+                                .foregroundColor(.secondary.opacity(0.6))
+                        }
+                    }
+                    
+                    // Thin progress bar matching menu badge health color
+                    MinimalProgressBar(
+                        percent: usage.isActive ? argonWindow.remainingPercent : 0,
+                        fillColor: usage.isActive ? argonWindow.healthStatus.color : Color.gray.opacity(0.3)
+                    )
+                }
+            }
+            
+            // 5-Hour / Short limit row (shared for both)
             VStack(alignment: .leading, spacing: 5) {
                 HStack {
                     Text(usage.shortWindow.localizedTitle)

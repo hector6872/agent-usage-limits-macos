@@ -29,6 +29,20 @@ public final class UsageManager: ObservableObject {
         }
     }
     
+    /// Selected model for Antigravity menu bar display (Gemini or Argon)
+    public enum AntigravityMenuBarModel: String, CaseIterable, Identifiable, Sendable {
+        case gemini = "gemini"
+        case argon = "argon"
+        
+        public var id: String { rawValue }
+    }
+    
+    @Published public var antigravityMenuBarModel: AntigravityMenuBarModel = .gemini {
+        didSet {
+            UserDefaults.standard.set(antigravityMenuBarModel.rawValue, forKey: "antigravity_menubar_model")
+        }
+    }
+    
     /// Registered providers
     public private(set) var providers: [any UsageProvider] = []
     
@@ -44,6 +58,12 @@ public final class UsageManager: ObservableObject {
         // Load saved notification preference
         if UserDefaults.standard.object(forKey: "notify_on_critical_level") != nil {
             self.notifyOnCriticalLevel = UserDefaults.standard.bool(forKey: "notify_on_critical_level")
+        }
+        
+        // Load saved Antigravity menu bar model preference
+        if let savedModel = UserDefaults.standard.string(forKey: "antigravity_menubar_model"),
+           let model = AntigravityMenuBarModel(rawValue: savedModel) {
+            self.antigravityMenuBarModel = model
         }
         
         if providers.isEmpty {

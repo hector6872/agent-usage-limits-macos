@@ -6,6 +6,7 @@
 /* Quota Windows */
 "short_limit_title" = "%@時間制限";
 "weekly_limit_title" = "週間";
+"argon_weekly_limit_title" = "Argon (週間)";
 
 /* Reset countdowns */
 "resets_soon" = "まもなくリセット";
@@ -21,6 +22,7 @@
 
 /* Settings Drawer */
 "providers_header" = "プロバイダー";
+"menubar_model_label" = "メニューバーに表示";
 "language_label" = "言語";
 "language_system" = "システム";
 "refresh_interval" = "更新間隔";

@@ -98,6 +98,8 @@ public struct QuotaWindow: Identifiable, Codable, Sendable {
         if let hours = windowDurationHours, hours < 24 {
             let hoursStr = hours.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(hours))" : String(format: "%.1f", hours)
             return LocalizationManager.shared.string("short_limit_title", hoursStr)
+        } else if name.lowercased().contains("argon") {
+            return LocalizationManager.shared["argon_weekly_limit_title"]
         } else if windowDurationHours == 168.0 || name.lowercased().contains("weekly") || name.lowercased().contains("semanal") {
             return LocalizationManager.shared["weekly_limit_title"]
         }
@@ -119,8 +121,11 @@ public struct ProviderUsage: Identifiable, Sendable {
     /// Short-term sliding/session window (default 5h or configured by provider)
     public let shortWindow: QuotaWindow
     
-    /// Long-term weekly window
+    /// Long-term weekly window (standard Gemini / default weekly)
     public let weeklyWindow: QuotaWindow
+    
+    /// Optional separate Argon weekly window (for Antigravity)
+    public let argonWindow: QuotaWindow?
     
     /// Whether to display the dual-line weekly metric in the compact menu bar
     public let showWeeklyInMenuBar: Bool
@@ -135,6 +140,7 @@ public struct ProviderUsage: Identifiable, Sendable {
         isActive: Bool = true,
         shortWindow: QuotaWindow,
         weeklyWindow: QuotaWindow,
+        argonWindow: QuotaWindow? = nil,
         showWeeklyInMenuBar: Bool = true,
         lastUpdated: Date = Date(),
         errorMessage: String? = nil
@@ -145,6 +151,7 @@ public struct ProviderUsage: Identifiable, Sendable {
         self.isActive = isActive
         self.shortWindow = shortWindow
         self.weeklyWindow = weeklyWindow
+        self.argonWindow = argonWindow
         self.showWeeklyInMenuBar = showWeeklyInMenuBar
         self.lastUpdated = lastUpdated
         self.errorMessage = errorMessage
