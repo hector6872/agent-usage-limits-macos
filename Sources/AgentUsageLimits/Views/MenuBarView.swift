@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// The horizontal menu bar view showing active AI providers with adaptive Light/Dark mode typography
+@MainActor
 public struct MenuBarView: View {
     @ObservedObject var usageManager: UsageManager
     public var isDarkMode: Bool = true
@@ -37,6 +38,7 @@ public struct MenuBarView: View {
 }
 
 /// Individual provider item in the menu bar with strict tabular alignment, inactive state, and 0% red highlight
+@MainActor
 struct ProviderMenuBarItem: View {
     let usage: ProviderUsage
     let usageManager: UsageManager
