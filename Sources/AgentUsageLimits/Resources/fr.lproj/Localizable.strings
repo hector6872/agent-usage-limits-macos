@@ -6,6 +6,7 @@
 /* Quota Windows */
 "short_limit_title" = "Limite de %@ heures";
 "weekly_limit_title" = "Hebdomadaire";
+"argon_weekly_limit_title" = "Argon (Hebdomadaire)";
 
 /* Reset countdowns */
 "resets_soon" = "réinitialisation proche";
@@ -21,6 +22,7 @@
 
 /* Settings Drawer */
 "providers_header" = "FOURNISSEURS";
+"menubar_model_label" = "Afficher dans la barre";
 "language_label" = "Langue";
 "language_system" = "Système";
 "refresh_interval" = "Fréquence d'actualisation";

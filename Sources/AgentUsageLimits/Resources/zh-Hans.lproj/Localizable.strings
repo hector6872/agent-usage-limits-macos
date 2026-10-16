@@ -6,6 +6,7 @@
 /* Quota Windows */
 "short_limit_title" = "%@小时限制";
 "weekly_limit_title" = "每周";
+"argon_weekly_limit_title" = "Argon (每周)";
 
 /* Reset countdowns */
 "resets_soon" = "即将重置";
@@ -21,6 +22,7 @@
 
 /* Settings Drawer */
 "providers_header" = "服务商";
+"menubar_model_label" = "在菜单栏显示";
 "language_label" = "语言";
 "language_system" = "跟随系统";
 "refresh_interval" = "刷新间隔";

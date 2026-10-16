@@ -73,6 +73,28 @@ public final class NotificationService {
                 // Recovered from critical or reset
                 notifiedWindows.remove(weeklyKey)
             }
+            
+            // 3. Check Argon window (if present)
+            if let argonWindow = usage.argonWindow {
+                let argonKey = "\(usage.providerId)_argon"
+                if argonWindow.healthStatus == .critical {
+                    if !notifiedWindows.contains(argonKey) {
+                        notifiedWindows.insert(argonKey)
+                        sendNotification(
+                            title: l10n.string("critical_notification_title", "\(usage.displayName) (Argon)"),
+                            body: l10n.string(
+                                "critical_notification_body",
+                                argonWindow.localizedTitle,
+                                "\(argonWindow.roundedRemainingPercent)",
+                                argonWindow.localizedResetsFormatted
+                            ),
+                            identifier: argonKey
+                        )
+                    }
+                } else {
+                    notifiedWindows.remove(argonKey)
+                }
+            }
         }
     }
     

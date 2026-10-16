@@ -6,6 +6,7 @@
 /* Quota Windows */
 "short_limit_title" = "Лимит на %@ ч";
 "weekly_limit_title" = "За неделю";
+"argon_weekly_limit_title" = "Argon (За неделю)";
 
 /* Reset countdowns */
 "resets_soon" = "скоро обновится";
@@ -21,6 +22,7 @@
 
 /* Settings Drawer */
 "providers_header" = "ПРОВАЙДЕРЫ";
+"menubar_model_label" = "Показывать в строке меню";
 "language_label" = "Язык";
 "language_system" = "Системный";
 "refresh_interval" = "Интервал обновления";

@@ -295,6 +295,7 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
     private func probeCLISummary() async -> ParsedQuotaSummary? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let candidates = [
+            "\(home)/.gemini/bin/agy",
             "/opt/homebrew/bin/agy",
             "/usr/local/bin/agy",
             "\(home)/.cargo/bin/agy",
@@ -411,6 +412,8 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         let shortResetDate: Date?
         let weeklyUsedPercent: Double
         let weeklyResetDate: Date?
+        let argonUsedPercent: Double?
+        let argonResetDate: Date?
     }
     
     private func parseQuotaResponse(_ data: Data) -> ParsedQuotaSummary? {
@@ -418,21 +421,27 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         
         let root = (json["response"] as? [String: Any])
             ?? (json["summary"] as? [String: Any])
+            ?? (json["command"] as? [String: Any])?["data"] as? [String: Any]
             ?? json
         guard let groups = root["groups"] as? [[String: Any]] else {
             // Check fallback for clientModelConfigs in GetUserStatus
             return parseFallbackUserStatus(root)
         }
         
-        // 1. Focus on Gemini models (exclude Claude / GPT / 3P models)
+        // 1. Separate Argon groups from Gemini / other groups
+        let argonGroups = groups.filter { group in
+            let title = ((group["displayName"] as? String) ?? (group["name"] as? String) ?? "").lowercased()
+            return title.contains("argon")
+        }
+        
         let geminiGroups = groups.filter { group in
             let title = ((group["displayName"] as? String) ?? (group["name"] as? String) ?? "").lowercased()
-            return title.contains("gemini")
+            return (title.contains("gemini") || title.contains("flash") || title.contains("pro")) && !title.contains("argon")
         }
         
         let targetGroups = !geminiGroups.isEmpty ? geminiGroups : groups.filter { group in
             let title = ((group["displayName"] as? String) ?? (group["name"] as? String) ?? "").lowercased()
-            return !title.contains("claude") && !title.contains("gpt") && !title.contains("3p")
+            return !title.contains("claude") && !title.contains("gpt") && !title.contains("3p") && !title.contains("argon")
         }
         let effectiveGroups = !targetGroups.isEmpty ? targetGroups : groups
         
@@ -440,6 +449,29 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         for group in effectiveGroups {
             if let buckets = group["buckets"] as? [[String: Any]] {
                 allBuckets.append(contentsOf: buckets)
+            }
+        }
+        
+        var argonBuckets: [[String: Any]] = []
+        for group in argonGroups {
+            if let buckets = group["buckets"] as? [[String: Any]] {
+                argonBuckets.append(contentsOf: buckets)
+            }
+        }
+        
+        // Also check if any bucket across all groups has argon in its id or name
+        for group in groups {
+            if let buckets = group["buckets"] as? [[String: Any]] {
+                for b in buckets {
+                    let bId = ((b["bucketId"] as? String) ?? (b["id"] as? String) ?? "").lowercased()
+                    let bName = ((b["displayName"] as? String) ?? (b["name"] as? String) ?? "").lowercased()
+                    if (bId.contains("argon") || bName.contains("argon")) && !argonBuckets.contains(where: {
+                        let existingId = (($0["bucketId"] as? String) ?? ($0["id"] as? String) ?? "")
+                        return !existingId.isEmpty && existingId == ((b["bucketId"] as? String) ?? (b["id"] as? String) ?? "")
+                    }) {
+                        argonBuckets.append(b)
+                    }
+                }
             }
         }
         
@@ -456,8 +488,11 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
             if let rf = (b["remainingFraction"] as? NSNumber)?.doubleValue {
                 return rf
             }
+            if let rf = (b["remaining_fraction"] as? NSNumber)?.doubleValue {
+                return rf
+            }
             if let remaining = b["remaining"] as? [String: Any],
-               let rf = (remaining["remainingFraction"] as? NSNumber)?.doubleValue {
+               let rf = ((remaining["remainingFraction"] as? NSNumber) ?? (remaining["remaining_fraction"] as? NSNumber))?.doubleValue {
                 return rf
             }
             return 1.0
@@ -465,11 +500,11 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         
         func extractResetDate(_ bucket: [String: Any]?) -> Date? {
             guard let b = bucket else { return nil }
-            if let resetStr = b["resetTime"] as? String {
+            if let resetStr = (b["resetTime"] as? String) ?? (b["reset_time"] as? String) {
                 return parseDate(resetStr)
             }
             if let remaining = b["remaining"] as? [String: Any],
-               let resetStr = remaining["resetTime"] as? String {
+               let resetStr = (remaining["resetTime"] as? String) ?? (remaining["reset_time"] as? String) {
                 return parseDate(resetStr)
             }
             return nil
@@ -477,8 +512,8 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         
         func matchesCadence(_ bucket: [String: Any], aliases: Set<String>) -> Bool {
             if (bucket["disabled"] as? Bool) == true { return false }
-            let bucketId = ((bucket["bucketId"] as? String) ?? "").lowercased().replacingOccurrences(of: "_", with: "-")
-            let displayName = ((bucket["displayName"] as? String) ?? "").lowercased().replacingOccurrences(of: "_", with: "-")
+            let bucketId = ((bucket["bucketId"] as? String) ?? (bucket["id"] as? String) ?? "").lowercased().replacingOccurrences(of: "_", with: "-")
+            let displayName = ((bucket["displayName"] as? String) ?? (bucket["name"] as? String) ?? "").lowercased().replacingOccurrences(of: "_", with: "-")
             let window = ((bucket["window"] as? String) ?? "").lowercased().replacingOccurrences(of: "_", with: "-")
             
             for alias in aliases {
@@ -489,11 +524,13 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
             return false
         }
         
-        // Categorize buckets
+        // Categorize Gemini buckets
         var shortBuckets: [[String: Any]] = []
         var weeklyBuckets: [[String: Any]] = []
         
         for bucket in allBuckets {
+            let bId = ((bucket["bucketId"] as? String) ?? (bucket["id"] as? String) ?? "").lowercased()
+            if bId.contains("argon") { continue }
             if matchesCadence(bucket, aliases: sessionAliases) {
                 shortBuckets.append(bucket)
             }
@@ -502,16 +539,23 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
             }
         }
         
+        // Categorize Argon buckets
+        var argonWeeklyBuckets: [[String: Any]] = []
+        for bucket in argonBuckets {
+            if matchesCadence(bucket, aliases: weeklyAliases) {
+                argonWeeklyBuckets.append(bucket)
+            }
+        }
+        
         // Fallback to legacy exact bucketId mapping if lists are empty
         var bucketMap: [String: [String: Any]] = [:]
         for b in allBuckets {
-            if let id = b["bucketId"] as? String {
+            if let id = (b["bucketId"] as? String) ?? (b["id"] as? String) {
                 bucketMap[id] = b
             }
         }
         
         // Select the most favorable (maximum remainingFraction) bucket for each window
-        // When Google grants an early reset or marketing bonus, the user has the benefit of that bonus (e.g. 100%)
         let bestShortBucket = shortBuckets.max { a, b in
             extractRemainingFraction(a) < extractRemainingFraction(b)
         } ?? bucketMap["gemini-5h"]
@@ -519,6 +563,10 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         let bestWeeklyBucket = weeklyBuckets.max { a, b in
             extractRemainingFraction(a) < extractRemainingFraction(b)
         } ?? bucketMap["gemini-weekly"]
+        
+        let bestArgonBucket = argonWeeklyBuckets.max { a, b in
+            extractRemainingFraction(a) < extractRemainingFraction(b)
+        } ?? bucketMap["gemini-argon-wtu-weekly"] ?? bucketMap["argon-weekly"]
         
         let shortRemainingFraction = extractRemainingFraction(bestShortBucket)
         let weeklyRemainingFraction = extractRemainingFraction(bestWeeklyBucket)
@@ -529,11 +577,21 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         let shortUsedPercent = max(0.0, min(100.0, (1.0 - shortRemainingFraction) * 100.0))
         let weeklyUsedPercent = max(0.0, min(100.0, (1.0 - weeklyRemainingFraction) * 100.0))
         
+        var argonUsedPercent: Double?
+        var argonResetDate: Date?
+        if let argonB = bestArgonBucket {
+            let argonFrac = extractRemainingFraction(argonB)
+            argonUsedPercent = max(0.0, min(100.0, (1.0 - argonFrac) * 100.0))
+            argonResetDate = extractResetDate(argonB)
+        }
+        
         return ParsedQuotaSummary(
             shortUsedPercent: shortUsedPercent,
             shortResetDate: shortResetDate,
             weeklyUsedPercent: weeklyUsedPercent,
-            weeklyResetDate: weeklyResetDate
+            weeklyResetDate: weeklyResetDate,
+            argonUsedPercent: argonUsedPercent,
+            argonResetDate: argonResetDate
         )
     }
     
@@ -575,7 +633,9 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
                 shortUsedPercent: used,
                 shortResetDate: bestResetDate,
                 weeklyUsedPercent: used,
-                weeklyResetDate: bestResetDate
+                weeklyResetDate: bestResetDate,
+                argonUsedPercent: nil,
+                argonResetDate: nil
             )
         }
         return nil
@@ -596,6 +656,15 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
             resetDate: summary.weeklyResetDate
         )
         
+        let argonWindow: QuotaWindow? = summary.argonUsedPercent.map { used in
+            QuotaWindow(
+                name: "Argon Weekly",
+                windowDurationHours: 168.0,
+                usedPercent: used,
+                resetDate: summary.argonResetDate
+            )
+        }
+        
         return ProviderUsage(
             providerId: id,
             displayName: displayName,
@@ -603,6 +672,7 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
             isActive: isActive,
             shortWindow: shortWindow,
             weeklyWindow: weeklyWindow,
+            argonWindow: argonWindow,
             showWeeklyInMenuBar: true,
             lastUpdated: now
         )

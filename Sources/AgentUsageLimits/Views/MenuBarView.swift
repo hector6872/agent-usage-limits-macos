@@ -26,7 +26,7 @@ public struct MenuBarView: View {
                     .foregroundColor(primaryColor)
             } else {
                 ForEach(active) { usage in
-                    ProviderMenuBarItem(usage: usage, isDarkMode: isDarkMode)
+                    ProviderMenuBarItem(usage: usage, usageManager: usageManager, isDarkMode: isDarkMode)
                 }
             }
         }
@@ -39,6 +39,7 @@ public struct MenuBarView: View {
 /// Individual provider item in the menu bar with strict tabular alignment, inactive state, and 0% red highlight
 struct ProviderMenuBarItem: View {
     let usage: ProviderUsage
+    let usageManager: UsageManager
     let isDarkMode: Bool
     
     private var primaryColor: Color {
@@ -47,6 +48,15 @@ struct ProviderMenuBarItem: View {
     
     private var inactiveColor: Color {
         primaryColor.opacity(0.38)
+    }
+    
+    private var activeWeeklyWindow: QuotaWindow {
+        if usage.providerId == "antigravity",
+           usageManager.antigravityMenuBarModel == .argon,
+           let argon = usage.argonWindow {
+            return argon
+        }
+        return usage.weeklyWindow
     }
     
     var body: some View {
@@ -64,7 +74,7 @@ struct ProviderMenuBarItem: View {
                 VStack(alignment: .center, spacing: 1) {
                     Text("W")
                         .font(.system(size: 7.5, weight: .bold, design: .rounded))
-                        .foregroundColor(usage.isActive ? usage.weeklyWindow.healthStatus.color : Color.gray.opacity(0.45))
+                        .foregroundColor(usage.isActive ? activeWeeklyWindow.healthStatus.color : Color.gray.opacity(0.45))
                         .frame(width: 8, height: 9.5, alignment: .center)
                     
                     Circle()
@@ -76,7 +86,7 @@ struct ProviderMenuBarItem: View {
                 // 3. Percentages Column (Trailing-aligned numbers; turns red if 0%, --% if inactive)
                 VStack(alignment: .trailing, spacing: 1) {
                     if usage.isActive {
-                        let weeklyRemaining = usage.weeklyWindow.roundedRemainingPercent
+                        let weeklyRemaining = activeWeeklyWindow.roundedRemainingPercent
                         Text("\(weeklyRemaining)%")
                             .font(.system(size: 9.5, weight: .semibold, design: .rounded))
                             .monospacedDigit()

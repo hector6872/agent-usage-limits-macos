@@ -6,6 +6,7 @@
 /* Quota Windows */
 "short_limit_title" = "%@시간 제한";
 "weekly_limit_title" = "주간";
+"argon_weekly_limit_title" = "Argon (주간)";
 
 /* Reset countdowns */
 "resets_soon" = "곧 초기화됨";
@@ -21,6 +22,7 @@
 
 /* Settings Drawer */
 "providers_header" = "제공자";
+"menubar_model_label" = "메뉴 막대에 표시";
 "language_label" = "언어";
 "language_system" = "시스템 기본값";
 "refresh_interval" = "새로고침 주기";
