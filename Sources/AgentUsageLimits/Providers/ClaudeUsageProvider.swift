@@ -62,8 +62,8 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
     
     /// 2. Checks if Claude CLI / background agent processes are running
     public var isCLIRunning: Bool {
-        var pids = [pid_t](repeating: 0, count: 4096)
-        let bytesUsed = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size))
+        var pids = [pid_t](repeating: 0, count: 8192)
+        let bytesUsed = proc_listpids(UInt32(PROC_ALL_PIDS), 0, &pids, Int32(pids.count * MemoryLayout<pid_t>.size))
         let count = Int(bytesUsed) / MemoryLayout<pid_t>.size
         guard count > 0 else { return false }
         
@@ -133,6 +133,16 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
               let latest = samples.last,
               let u = latest["u"] as? [String: Any] else {
             return nil
+        }
+        
+        // Guard against stale telemetry: Claude Desktop pauses background updates
+        // if the tray icon has not been opened recently. Reject samples older than 45 minutes.
+        if let sampleMs = latest["t"] as? Double {
+            let sampleDate = Date(timeIntervalSince1970: sampleMs / 1000)
+            let maxAge: TimeInterval = 45 * 60 // 45 minutes
+            if now.timeIntervalSince(sampleDate) > maxAge {
+                return nil
+            }
         }
         
         let fhUsed = (u["fh"] as? NSNumber)?.doubleValue ?? Double(u["fh"] as? Int ?? 0)
@@ -489,14 +499,101 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
             return keychainResult
         }
         
-        // 3. Fallback to environment variable
+        // 3. Fallback to environment variable in current process
         if let envToken = ProcessInfo.processInfo.environment["CLAUDE_CODE_OAUTH_TOKEN"]?.trimmingCharacters(in: .whitespacesAndNewlines),
            !envToken.isEmpty {
             let oauth = ClaudeOAuthCredentials(accessToken: envToken, refreshToken: nil, expiresAt: nil, subscriptionType: nil)
             return ClaudeCredentialResult(oauth: oauth, source: .environment, fullData: [:])
         }
         
+        // 4. Extract token from active Claude Code / Desktop agent processes
+        if let processResult = loadFromRunningProcesses() {
+            return processResult
+        }
+        
         return nil
+    }
+    
+    private func loadFromRunningProcesses() -> ClaudeCredentialResult? {
+        var pids = [pid_t](repeating: 0, count: 8192)
+        let bytesUsed = proc_listpids(UInt32(PROC_ALL_PIDS), 0, &pids, Int32(pids.count * MemoryLayout<pid_t>.size))
+        let count = Int(bytesUsed) / MemoryLayout<pid_t>.size
+        guard count > 0 else { return nil }
+        
+        let targetCLIProcesses: Set<String> = [
+            "claude",
+            "claude-code"
+        ]
+        
+        for i in 0..<count {
+            let pid = pids[i]
+            if pid <= 0 { continue }
+            var nameBuffer = [CChar](repeating: 0, count: 1024)
+            let nameLen = proc_name(pid, &nameBuffer, UInt32(nameBuffer.count))
+            if nameLen > 0 {
+                let procName = nameBuffer.withUnsafeBufferPointer { ptr in
+                    String(cString: ptr.baseAddress!)
+                }.lowercased()
+                
+                let matches = targetCLIProcesses.contains { procName == $0 || procName.contains($0) }
+                if matches {
+                    if let token = extractOAuthTokenFromProcess(pid: pid) {
+                        let oauth = ClaudeOAuthCredentials(accessToken: token, refreshToken: nil, expiresAt: nil, subscriptionType: nil)
+                        return ClaudeCredentialResult(oauth: oauth, source: .environment, fullData: [:])
+                    }
+                }
+            }
+        }
+        return nil
+    }
+    
+    private func extractOAuthTokenFromProcess(pid: pid_t) -> String? {
+        var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
+        var size: Int = 0
+        if sysctl(&mib, 3, nil, &size, nil, 0) != 0 || size <= 0 {
+            return nil
+        }
+        
+        var buffer = [CChar](repeating: 0, count: size)
+        if sysctl(&mib, 3, &buffer, &size, nil, 0) != 0 {
+            return nil
+        }
+        
+        return buffer.withUnsafeBufferPointer { ptr -> String? in
+            guard let base = ptr.baseAddress else { return nil }
+            let argc = Int(base.withMemoryRebound(to: Int32.self, capacity: 1) { $0.pointee })
+            var offset = MemoryLayout<Int32>.size
+            
+            // Skip executable path
+            while offset < size && ptr[offset] != 0 { offset += 1 }
+            // Skip null padding
+            while offset < size && ptr[offset] == 0 { offset += 1 }
+            
+            // Skip argv entries
+            for _ in 0..<argc {
+                while offset < size && ptr[offset] != 0 { offset += 1 }
+                while offset < size && ptr[offset] == 0 { offset += 1 }
+            }
+            
+            // Search environment variables
+            let tokenPrefix = "CLAUDE_CODE_OAUTH_TOKEN="
+            while offset < size {
+                let start = offset
+                while offset < size && ptr[offset] != 0 { offset += 1 }
+                if offset > start {
+                    let bytes = Array(ptr[start..<offset]) + [0]
+                    if let entry = String(cString: bytes) as String?,
+                       entry.hasPrefix(tokenPrefix) {
+                        let token = String(entry.dropFirst(tokenPrefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !token.isEmpty {
+                            return token
+                        }
+                    }
+                }
+                offset += 1
+            }
+            return nil
+        }
     }
     
     private func loadFromFile() -> ClaudeCredentialResult? {
@@ -707,10 +804,16 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
     }
     
     private func parseCLIOutput(_ text: String) -> ParsedClaudeQuota? {
-        let clean = text.replacingOccurrences(of: #"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"#, with: "", options: .regularExpression)
+        var clean = text.replacingOccurrences(of: #"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"#, with: "", options: .regularExpression)
         
-        let sessionLabels = ["Current session", "5-hour limit", "5-hour", "Session limit", "Session"]
-        let weeklyLabels = ["Current week", "Weekly limit", "Weekly", "Week", "7-day"]
+        // Discard "What's contributing to your limits usage?" telemetry breakdown to prevent
+        // matching subagent / skill breakdown percentages as quota limits
+        if let breakdownIndex = clean.range(of: "What's contributing", options: [.caseInsensitive]) {
+            clean = String(clean[..<breakdownIndex.lowerBound])
+        }
+        
+        let sessionLabels = ["Current session", "5-hour limit", "5-hour window", "Session limit"]
+        let weeklyLabels = ["Current week", "Weekly limit", "7-day limit"]
         
         let sessionInfo = parseUsageSection(labels: sessionLabels, text: clean)
         let weeklyInfo = parseUsageSection(labels: weeklyLabels, text: clean)
