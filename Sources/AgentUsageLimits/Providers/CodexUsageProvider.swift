@@ -482,6 +482,7 @@ public final class CodexUsageProvider: UsageProvider, @unchecked Sendable {
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: binary)
+        process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
         process.arguments = ["usage"]
         
         let pipe = Pipe()
@@ -515,6 +516,7 @@ public final class CodexUsageProvider: UsageProvider, @unchecked Sendable {
         
         let whichProcess = Process()
         whichProcess.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        whichProcess.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
         whichProcess.arguments = ["codex"]
         let pipe = Pipe()
         whichProcess.standardOutput = pipe

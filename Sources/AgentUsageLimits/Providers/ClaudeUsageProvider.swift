@@ -111,11 +111,6 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
             return buildProviderUsage(from: desktopQuota, isActive: true, now: now)
         }
         
-        // 3. Try CLI `/usage` fallback if available
-        if let cliQuota = await probeCLIUsage() {
-            return buildProviderUsage(from: cliQuota, isActive: true, now: now)
-        }
-        
         // Fallback: Empty active quota if unable to parse live data
         return buildEmptyActiveUsage(now: now)
     }
@@ -655,6 +650,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         for service in services {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+            process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
             process.arguments = ["find-generic-password", "-s", service, "-w"]
             
             let pipe = Pipe()
@@ -731,6 +727,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
                let jsonString = String(data: data, encoding: .utf8) {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+                process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
                 process.arguments = ["add-generic-password", "-U", "-s", service, "-a", NSUserName(), "-w", jsonString]
                 try? process.run()
                 process.waitUntilExit()
@@ -738,246 +735,6 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         case .environment:
             break
         }
-    }
-    
-    // MARK: - CLI Fallback Probing
-    
-    private func probeCLIUsage() async -> ParsedClaudeQuota? {
-        let binaryPath = findClaudeBinary()
-        guard let binary = binaryPath else { return nil }
-        
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: binary)
-        process.arguments = ["-p", "/usage", "--allowedTools", ""]
-        
-        var env = ProcessInfo.processInfo.environment
-        env.removeValue(forKey: "CLAUDE_CODE_OAUTH_TOKEN")
-        process.environment = env
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-        
-        do {
-            try process.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            
-            guard let text = String(data: data, encoding: .utf8), !text.isEmpty else { return nil }
-            return parseCLIOutput(text)
-        } catch {
-            return nil
-        }
-    }
-    
-    private func findClaudeBinary() -> String? {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let candidates = [
-            "/usr/local/bin/claude",
-            "/opt/homebrew/bin/claude",
-            "\(home)/.local/bin/claude",
-            "\(home)/.npm-global/bin/claude",
-            "\(home)/.nvm/versions/node/current/bin/claude",
-            "\(home)/.cargo/bin/claude"
-        ]
-        for path in candidates {
-            if FileManager.default.isExecutableFile(atPath: path) {
-                return path
-            }
-        }
-        
-        let whichProcess = Process()
-        whichProcess.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        whichProcess.arguments = ["claude"]
-        let pipe = Pipe()
-        whichProcess.standardOutput = pipe
-        try? whichProcess.run()
-        whichProcess.waitUntilExit()
-        
-        if whichProcess.terminationStatus == 0 {
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let found = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !found.isEmpty {
-                return found
-            }
-        }
-        return nil
-    }
-    
-    private func parseCLIOutput(_ text: String) -> ParsedClaudeQuota? {
-        var clean = text.replacingOccurrences(of: #"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"#, with: "", options: .regularExpression)
-        
-        // Discard "What's contributing to your limits usage?" telemetry breakdown to prevent
-        // matching subagent / skill breakdown percentages as quota limits
-        if let breakdownIndex = clean.range(of: "What's contributing", options: [.caseInsensitive]) {
-            clean = String(clean[..<breakdownIndex.lowerBound])
-        }
-        
-        let sessionLabels = ["Current session", "5-hour limit", "5-hour window", "Session limit"]
-        let weeklyLabels = ["Current week", "Weekly limit", "7-day limit"]
-        
-        let sessionInfo = parseUsageSection(labels: sessionLabels, text: clean)
-        let weeklyInfo = parseUsageSection(labels: weeklyLabels, text: clean)
-        
-        guard let sessionUsed = sessionInfo.usedPercent else {
-            return nil
-        }
-        
-        return ParsedClaudeQuota(
-            shortUsedPercent: sessionUsed,
-            shortResetDate: sessionInfo.resetDate,
-            weeklyUsedPercent: weeklyInfo.usedPercent ?? 0.0,
-            weeklyResetDate: weeklyInfo.resetDate
-        )
-    }
-    
-    private func parseUsageSection(labels: [String], text: String) -> (usedPercent: Double?, resetDate: Date?) {
-        for label in labels {
-            let result = parseSingleUsageSection(label: label, text: text)
-            if result.usedPercent != nil || result.resetDate != nil {
-                return result
-            }
-        }
-        return (nil, nil)
-    }
-    
-    private func parseSingleUsageSection(label: String, text: String) -> (usedPercent: Double?, resetDate: Date?) {
-        guard let labelRange = text.range(of: label, options: [.caseInsensitive]) else {
-            return (nil, nil)
-        }
-        let section = String(text[labelRange.lowerBound...])
-        
-        // Find next section boundary if any
-        let nextSectionPattern = #"\n\s*(?:Current\s+session|Current\s+week|5-hour|Weekly|What's\s+contributing)"#
-        let boundedSection: String
-        if let nextMatch = section.range(of: nextSectionPattern, options: [.regularExpression], range: section.index(after: section.startIndex)..<section.endIndex) {
-            boundedSection = String(section[..<nextMatch.lowerBound])
-        } else {
-            boundedSection = section
-        }
-        
-        // Extract percentage: e.g. "61% used" or "39% remaining"
-        var usedPercent: Double? = nil
-        let pctPattern = #"(\d+(?:\.\d+)?)\s*%\s*(used|remaining|left)?"#
-        if let regex = try? NSRegularExpression(pattern: pctPattern, options: [.caseInsensitive]),
-           let match = regex.firstMatch(in: boundedSection, options: [], range: NSRange(boundedSection.startIndex..<boundedSection.endIndex, in: boundedSection)),
-           let numRange = Range(match.range(at: 1), in: boundedSection) {
-            let num = Double(boundedSection[numRange]) ?? 0.0
-            if match.numberOfRanges > 2, let typeRange = Range(match.range(at: 2), in: boundedSection) {
-                let type = boundedSection[typeRange].lowercased()
-                if type == "remaining" || type == "left" {
-                    usedPercent = max(0.0, min(100.0, 100.0 - num))
-                } else {
-                    usedPercent = max(0.0, min(100.0, num))
-                }
-            } else {
-                usedPercent = max(0.0, min(100.0, num))
-            }
-        }
-        
-        let resetDate = parseResetDate(from: boundedSection)
-        return (usedPercent, resetDate)
-    }
-    
-    private func parseResetDate(from text: String) -> Date? {
-        // 1. Try relative duration first: "in 2h 15m", "in 30m", "in 2d"
-        if let relativeDate = parseRelativeDuration(from: text) {
-            return relativeDate
-        }
-        // 2. Try absolute date/time with timezone: "Resets 1:09am (America/Chicago)"
-        return parseAbsoluteDate(from: text)
-    }
-    
-    private func parseRelativeDuration(from text: String) -> Date? {
-        var totalSeconds: TimeInterval = 0
-        
-        if let dayMatch = text.range(of: #"(\d+)\s*d(?:ays?)?"#, options: .regularExpression),
-           let days = Double(text[dayMatch].filter(\.isNumber)) {
-            totalSeconds += days * 86400
-        }
-        if let hourMatch = text.range(of: #"(\d+)\s*h(?:ours?|r)?"#, options: .regularExpression),
-           let hours = Double(text[hourMatch].filter(\.isNumber)) {
-            totalSeconds += hours * 3600
-        }
-        if let minMatch = text.range(of: #"(\d+)\s*m(?:in(?:utes?)?)?"#, options: .regularExpression),
-           let minutes = Double(text[minMatch].filter(\.isNumber)) {
-            totalSeconds += minutes * 60
-        }
-        
-        return totalSeconds > 0 ? Date().addingTimeInterval(totalSeconds) : nil
-    }
-    
-    private func parseAbsoluteDate(from text: String) -> Date? {
-        let timeZone = extractTimeZone(from: text)
-        var cleaned = text
-        
-        if let lastResets = cleaned.range(of: "resets", options: [.caseInsensitive, .backwards]) {
-            cleaned = String(cleaned[lastResets.upperBound...])
-        }
-        cleaned = cleaned
-            .replacingOccurrences(of: #"\s*\([^)]+\)\s*$"#, with: "", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: #"\s+at\s+"#, with: ", ", options: .regularExpression)
-        
-        let formats = [
-            "MMM d, yyyy, h:mma",
-            "MMM d, yyyy, ha",
-            "MMM d, yyyy",
-            "MMM d, h:mma",
-            "MMM d, ha",
-            "h:mma",
-            "ha",
-            "MMM d"
-        ]
-        
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = timeZone ?? .current
-        
-        for format in formats {
-            formatter.dateFormat = format
-            if let date = formatter.date(from: cleaned) {
-                return resolveToFutureDate(date, format: format, timeZone: formatter.timeZone)
-            }
-        }
-        
-        return nil
-    }
-    
-    private func extractTimeZone(from text: String) -> TimeZone? {
-        guard let match = text.range(of: #"\(([^)]+)\)"#, options: [.regularExpression, .backwards]) else {
-            return nil
-        }
-        let content = String(text[match]).dropFirst().dropLast()
-        return TimeZone(identifier: String(content).trimmingCharacters(in: .whitespaces))
-    }
-    
-    private func resolveToFutureDate(_ parsedDate: Date, format: String, timeZone: TimeZone) -> Date {
-        var calendar = Calendar.current
-        calendar.timeZone = timeZone
-        let now = Date()
-        
-        if format.contains("yyyy") {
-            return parsedDate
-        }
-        
-        var components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: parsedDate)
-        let nowComponents = calendar.dateComponents([.year, .month, .day], from: now)
-        
-        components.year = nowComponents.year
-        if !format.contains("MMM") {
-            components.month = nowComponents.month
-            components.day = nowComponents.day
-        }
-        
-        guard let candidate = calendar.date(from: components) else { return parsedDate }
-        if candidate < now {
-            if !format.contains("MMM") {
-                return calendar.date(byAdding: .day, value: 1, to: candidate) ?? candidate
-            } else {
-                return calendar.date(byAdding: .year, value: 1, to: candidate) ?? candidate
-            }
-        }
-        return candidate
     }
     
     // MARK: - Helpers
