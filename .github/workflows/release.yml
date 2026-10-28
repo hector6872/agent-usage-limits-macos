@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Select Xcode Version
         run: |
@@ -40,7 +40,7 @@ jobs:
           shasum -a 256 AgentUsageLimits-macOS.zip > AgentUsageLimits-macOS.zip.sha256
 
       - name: Create GitHub Release and Upload Assets
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             AgentUsageLimits-macOS.zip
