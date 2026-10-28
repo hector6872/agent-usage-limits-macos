@@ -118,6 +118,9 @@ public struct ProviderUsage: Identifiable, Sendable {
     /// Whether the provider (App UI or CLI) is currently active / running
     public let isActive: Bool
     
+    /// Whether the usage data is provisional (e.g. waiting for API response or using cached quota)
+    public let isProvisional: Bool
+    
     /// Short-term sliding/session window (default 5h or configured by provider)
     public let shortWindow: QuotaWindow
     
@@ -142,6 +145,7 @@ public struct ProviderUsage: Identifiable, Sendable {
         weeklyWindow: QuotaWindow,
         argonWindow: QuotaWindow? = nil,
         showWeeklyInMenuBar: Bool = true,
+        isProvisional: Bool = false,
         lastUpdated: Date = Date(),
         errorMessage: String? = nil
     ) {
@@ -149,6 +153,7 @@ public struct ProviderUsage: Identifiable, Sendable {
         self.displayName = displayName
         self.iconSymbol = iconSymbol
         self.isActive = isActive
+        self.isProvisional = isProvisional
         self.shortWindow = shortWindow
         self.weeklyWindow = weeklyWindow
         self.argonWindow = argonWindow

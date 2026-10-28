@@ -325,7 +325,11 @@ struct ProviderSectionView: View {
                     
                     if usage.isActive {
                         let remaining = usage.weeklyWindow.roundedRemainingPercent
-                        if remaining >= 100 && usage.weeklyWindow.resetDate == nil {
+                        if usage.isProvisional && usage.weeklyWindow.resetDate == nil {
+                            Text("--%")
+                                .font(.system(size: 13.5, weight: .regular))
+                                .foregroundColor(.secondary.opacity(0.6))
+                        } else if remaining >= 100 && usage.weeklyWindow.resetDate == nil {
                             Text("\(remaining)%")
                                 .font(.system(size: 13.5, weight: .regular))
                                 .foregroundColor(.primary.opacity(0.85))
@@ -395,7 +399,11 @@ struct ProviderSectionView: View {
                     
                     if usage.isActive {
                         let remaining = usage.shortWindow.roundedRemainingPercent
-                        if remaining >= 100 && usage.shortWindow.resetDate == nil {
+                        if usage.isProvisional && usage.shortWindow.resetDate == nil {
+                            Text("--%")
+                                .font(.system(size: 13.5, weight: .regular))
+                                .foregroundColor(.secondary.opacity(0.6))
+                        } else if remaining >= 100 && usage.shortWindow.resetDate == nil {
                             Text("\(remaining)%")
                                 .font(.system(size: 13.5, weight: .regular))
                                 .foregroundColor(.primary.opacity(0.85))

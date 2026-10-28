@@ -114,6 +114,9 @@ public final class UsageManager: ObservableObject {
     
     deinit {
         timerTask?.cancel()
+        for task in retryTasks.values {
+            task.cancel()
+        }
     }
     
     /// Returns the usages of all currently enabled providers in registration order
@@ -206,6 +209,7 @@ public final class UsageManager: ObservableObject {
             for await (providerId, usage) in group {
                 if let usage = usage {
                     self.usages[providerId] = usage
+                    self.handleProvisionalUsage(for: providerId, usage: usage)
                 }
             }
         }
@@ -219,6 +223,7 @@ public final class UsageManager: ObservableObject {
         do {
             let usage = try await provider.fetchUsage()
             self.usages[provider.id] = usage
+            self.handleProvisionalUsage(for: provider.id, usage: usage)
         } catch {
             self.usages[provider.id] = ProviderUsage(
                 providerId: provider.id,
@@ -229,10 +234,79 @@ public final class UsageManager: ObservableObject {
                 weeklyWindow: QuotaWindow(name: "Weekly", usedPercent: 0),
                 errorMessage: error.localizedDescription
             )
+            self.cancelFastRetry(for: provider.id)
         }
         
         if notifyOnCriticalLevel {
             NotificationService.shared.checkAndNotifyCriticalQuotas(usages: self.usages)
+        }
+    }
+    
+    // MARK: - Fast Startup Retry (3s then 6s)
+    
+    private var retryTasks: [String: Task<Void, Never>] = [:]
+    
+    private func handleProvisionalUsage(for providerId: String, usage: ProviderUsage) {
+        if usage.isProvisional && usage.isActive {
+            // Only start a retry sequence if one isn't already active
+            if retryTasks[providerId] == nil {
+                scheduleFastRetry(for: providerId, attempt: 1)
+            }
+        } else {
+            cancelFastRetry(for: providerId)
+        }
+    }
+    
+    private func cancelFastRetry(for providerId: String) {
+        retryTasks[providerId]?.cancel()
+        retryTasks.removeValue(forKey: providerId)
+    }
+    
+    private func scheduleFastRetry(for providerId: String, attempt: Int) {
+        guard attempt <= 2 else {
+            cancelFastRetry(for: providerId)
+            return
+        }
+        
+        retryTasks[providerId]?.cancel()
+        
+        retryTasks[providerId] = Task { @MainActor [weak self] in
+            // Delay: 3.0s for attempt 1 (t=3s); 3.0s for attempt 2 (t=6s total)
+            try? await Task.sleep(for: .seconds(3.0))
+            guard !Task.isCancelled, let self = self else { return }
+            
+            guard let provider = self.providers.first(where: { $0.id == providerId && $0.isEnabled }) else {
+                self.cancelFastRetry(for: providerId)
+                return
+            }
+            
+            do {
+                let usage = try await provider.fetchUsage()
+                self.usages[providerId] = usage
+                
+                if usage.isProvisional && usage.isActive {
+                    if attempt == 1 {
+                        // Attempt 1 still provisional; try attempt 2 after another 3 seconds
+                        self.scheduleFastRetry(for: providerId, attempt: 2)
+                    } else {
+                        // Attempt 2 completed; stop retrying and wait for normal sync cycle
+                        self.cancelFastRetry(for: providerId)
+                    }
+                } else {
+                    // Success! Received non-provisional real data
+                    self.cancelFastRetry(for: providerId)
+                }
+            } catch {
+                if attempt == 1 {
+                    self.scheduleFastRetry(for: providerId, attempt: 2)
+                } else {
+                    self.cancelFastRetry(for: providerId)
+                }
+            }
+            
+            if self.notifyOnCriticalLevel {
+                NotificationService.shared.checkAndNotifyCriticalQuotas(usages: self.usages)
+            }
         }
     }
     

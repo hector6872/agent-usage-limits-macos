@@ -31,6 +31,25 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
     private let credentialLock = NSLock()
     private static let credentialTTL: TimeInterval = 5 * 60 // 5 minutes
     
+    // Cache for last known valid quota to avoid provisional 100% flicker
+    private var lastValidQuota: ParsedClaudeQuota?
+    private var lastValidQuotaDate: Date?
+    private let lastValidQuotaLock = NSLock()
+    
+    private func getLastValidQuota() -> (quota: ParsedClaudeQuota, date: Date)? {
+        lastValidQuotaLock.lock()
+        defer { lastValidQuotaLock.unlock() }
+        guard let quota = lastValidQuota, let date = lastValidQuotaDate else { return nil }
+        return (quota, date)
+    }
+    
+    private func setLastValidQuota(_ quota: ParsedClaudeQuota, date: Date = Date()) {
+        lastValidQuotaLock.lock()
+        defer { lastValidQuotaLock.unlock() }
+        lastValidQuota = quota
+        lastValidQuotaDate = date
+    }
+    
     public init(shortWindowDurationHours: Double = 5.0, isEnabled: Bool = true) {
         self.shortWindowDurationHours = shortWindowDurationHours
         self.isEnabled = isEnabled
@@ -103,16 +122,21 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         
         // 1. Try OAuth usage API (official Anthropic endpoint)
         if let apiQuota = await fetchAPIUsage() {
-            return buildProviderUsage(from: apiQuota, isActive: true, now: now)
+            return buildProviderUsage(from: apiQuota, isActive: true, now: now, isProvisional: false)
         }
         
         // 2. Try Claude Desktop App live telemetry history
         if let desktopQuota = loadFromDesktopHistory(now: now) {
-            return buildProviderUsage(from: desktopQuota, isActive: true, now: now)
+            return buildProviderUsage(from: desktopQuota, isActive: true, now: now, isProvisional: false)
+        }
+        
+        // 3. Fallback: Return last known valid quota if available within the last 24 hours
+        if let cached = getLastValidQuota(), now.timeIntervalSince(cached.date) < 24 * 3600 {
+            return buildProviderUsage(from: cached.quota, isActive: true, now: now, isProvisional: true)
         }
         
         // Fallback: Empty active quota if unable to parse live data
-        return buildEmptyActiveUsage(now: now)
+        return buildEmptyActiveUsage(now: now, isProvisional: true)
     }
     
     // MARK: - Claude Desktop Live Telemetry Probing
@@ -195,12 +219,15 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         comps.second = 0
         weeklyResetDate = calendar.nextDate(after: now, matching: comps, matchingPolicy: .nextTime)
         
-        return ParsedClaudeQuota(
+        let quota = ParsedClaudeQuota(
             shortUsedPercent: max(0.0, min(100.0, fhUsed)),
             shortResetDate: shortResetDate,
             weeklyUsedPercent: max(0.0, min(100.0, sdUsed)),
             weeklyResetDate: weeklyResetDate
         )
+        
+        setLastValidQuota(quota, date: now)
+        return quota
     }
     
     // MARK: - API Usage Probing
@@ -310,6 +337,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         }
         
         if let quota = parseAPIResponse(data) {
+            setLastValidQuota(quota)
             return .success(quota)
         }
         
@@ -739,7 +767,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
     
     // MARK: - Helpers
     
-    private func buildProviderUsage(from quota: ParsedClaudeQuota, isActive: Bool, now: Date) -> ProviderUsage {
+    private func buildProviderUsage(from quota: ParsedClaudeQuota, isActive: Bool, now: Date, isProvisional: Bool = false) -> ProviderUsage {
         let shortWindow = QuotaWindow(
             name: "\(Int(shortWindowDurationHours))-hour limit",
             windowDurationHours: shortWindowDurationHours,
@@ -762,6 +790,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
             shortWindow: shortWindow,
             weeklyWindow: weeklyWindow,
             showWeeklyInMenuBar: true,
+            isProvisional: isProvisional,
             lastUpdated: now
         )
     }
@@ -791,7 +820,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
         )
     }
     
-    private func buildEmptyActiveUsage(now: Date) -> ProviderUsage {
+    private func buildEmptyActiveUsage(now: Date, isProvisional: Bool = true) -> ProviderUsage {
         let shortWindow = QuotaWindow(
             name: "\(Int(shortWindowDurationHours))-hour limit",
             windowDurationHours: shortWindowDurationHours,
@@ -812,6 +841,7 @@ public final class ClaudeUsageProvider: UsageProvider, @unchecked Sendable {
             shortWindow: shortWindow,
             weeklyWindow: weeklyWindow,
             showWeeklyInMenuBar: true,
+            isProvisional: isProvisional,
             lastUpdated: now
         )
     }
