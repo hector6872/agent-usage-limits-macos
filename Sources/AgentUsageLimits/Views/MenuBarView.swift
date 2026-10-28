@@ -85,22 +85,36 @@ struct ProviderMenuBarItem: View {
                         .frame(width: 8, height: 9.5, alignment: .center)
                 }
                 
-                // 3. Percentages Column (Trailing-aligned numbers; turns red if 0%, --% if inactive)
+                // 3. Percentages Column (Trailing-aligned numbers; turns red if 0%, --% if inactive or provisional connecting)
                 VStack(alignment: .trailing, spacing: 1) {
                     if usage.isActive {
-                        let weeklyRemaining = activeWeeklyWindow.roundedRemainingPercent
-                        Text("\(weeklyRemaining)%")
-                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(weeklyRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
-                            .frame(height: 9.5, alignment: .trailing)
-                        
-                        let shortRemaining = usage.shortWindow.roundedRemainingPercent
-                        Text("\(shortRemaining)%")
-                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
-                            .frame(height: 9.5, alignment: .trailing)
+                        if usage.isProvisional && usage.shortWindow.resetDate == nil && activeWeeklyWindow.resetDate == nil {
+                            Text("--%")
+                                .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundColor(inactiveColor)
+                                .frame(height: 9.5, alignment: .trailing)
+                            
+                            Text("--%")
+                                .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundColor(inactiveColor)
+                                .frame(height: 9.5, alignment: .trailing)
+                        } else {
+                            let weeklyRemaining = activeWeeklyWindow.roundedRemainingPercent
+                            Text("\(weeklyRemaining)%")
+                                .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundColor(weeklyRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                                .frame(height: 9.5, alignment: .trailing)
+                            
+                            let shortRemaining = usage.shortWindow.roundedRemainingPercent
+                            Text("\(shortRemaining)%")
+                                .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                                .frame(height: 9.5, alignment: .trailing)
+                        }
                     } else {
                         Text("--%")
                             .font(.system(size: 9.5, weight: .semibold, design: .rounded))
@@ -130,11 +144,18 @@ struct ProviderMenuBarItem: View {
                     .frame(width: 5, height: 5)
                 
                 if usage.isActive {
-                    let shortRemaining = usage.shortWindow.roundedRemainingPercent
-                    Text("\(shortRemaining)%")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                    if usage.isProvisional && usage.shortWindow.resetDate == nil {
+                        Text("--%")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(inactiveColor)
+                    } else {
+                        let shortRemaining = usage.shortWindow.roundedRemainingPercent
+                        Text("\(shortRemaining)%")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(shortRemaining <= 0 ? HealthStatus.critical.color : primaryColor)
+                    }
                 } else {
                     Text("--%")
                         .font(.system(size: 12, weight: .semibold, design: .rounded))

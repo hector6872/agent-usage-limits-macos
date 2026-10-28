@@ -191,6 +191,7 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
     private func detectLocalProcess() -> LocalProcessInfo? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
         process.arguments = ["-lf", "language_server"]
         let pipe = Pipe()
         process.standardOutput = pipe
@@ -227,6 +228,7 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: lsofPath)
+        process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
         process.arguments = ["-nP", "-iTCP", "-sTCP:LISTEN", "-a", "-p", String(pid)]
         let pipe = Pipe()
         process.standardOutput = pipe
@@ -309,6 +311,7 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: agyPath)
+        process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
         process.arguments = ["-p", "/usage", "--output-format", "json"]
         let pipe = Pipe()
         process.standardOutput = pipe
@@ -381,6 +384,7 @@ public final class AntigravityUsageProvider: UsageProvider, @unchecked Sendable 
     private func loadKeychainToken() -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        process.currentDirectoryURL = URL(fileURLWithPath: NSTemporaryDirectory())
         process.arguments = ["find-generic-password", "-s", "gemini", "-a", "antigravity", "-w"]
         let pipe = Pipe()
         process.standardOutput = pipe
