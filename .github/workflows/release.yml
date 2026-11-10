@@ -11,7 +11,7 @@ permissions:
 jobs:
   build-and-release:
     name: Build and Release macOS App
-    runs-on: macos-14 # Apple Silicon (M1/M2/M3) runner
+    runs-on: macos-15 # Apple Silicon runner
 
     steps:
       - name: Checkout repository
